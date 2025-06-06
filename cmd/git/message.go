@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"geminielf/internal/ai"
-	"geminielf/internal/config"
-	"geminielf/internal/git"
+	"gelf/internal/ai"
+	"gelf/internal/config"
+	"gelf/internal/git"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"

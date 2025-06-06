@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"geminielf/internal/config"
+	"gelf/internal/config"
 
 	"google.golang.org/genai"
 )

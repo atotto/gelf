@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"geminielf/internal/ai"
-	"geminielf/internal/git"
+	"gelf/internal/ai"
+	"gelf/internal/git"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"

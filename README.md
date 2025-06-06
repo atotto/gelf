@@ -1,6 +1,6 @@
-# 🚀 geminielf
+# 🚀 gelf
 
-geminielf is a Go-based CLI tool that automatically generates Git commit messages using Vertex AI (Gemini). It analyzes staged changes and generates appropriate commit messages through a modern, interactive TUI interface built with Bubble Tea.
+gelf is a Go-based CLI tool that automatically generates Git commit messages using Vertex AI (Gemini). It analyzes staged changes and generates appropriate commit messages through a modern, interactive TUI interface built with Bubble Tea.
 
 ## ✨ Features
 
@@ -49,7 +49,7 @@ export VERTEXAI_PROJECT="your-project-id"
 export VERTEXAI_LOCATION="us-central1"
 
 # Gemini model to use (optional)
-export GEMINIELF_DEFAULT_MODEL="gemini-2.5-flash-preview-05-20"
+export GELF_DEFAULT_MODEL="gemini-2.5-flash-preview-05-20"
 ```
 
 ### 2. Service Account Setup
@@ -68,9 +68,9 @@ export GEMINIELF_DEFAULT_MODEL="gemini-2.5-flash-preview-05-20"
 git add .
 ```
 
-2. Run geminielf:
+2. Run gelf:
 ```bash
-geminielf git commit
+gelf git commit
 ```
 
 3. Interactive TUI operations:
@@ -83,22 +83,22 @@ geminielf git commit
 
 ```bash
 # Show help
-geminielf --help
+gelf --help
 
 # Show git subcommand help
-geminielf git --help
+gelf git --help
 
 # Show git commit subcommand help
-geminielf git commit --help
+gelf git commit --help
 
 # Generate commit message only (for external tool integration)
-geminielf git message
+gelf git message
 
 # Show diff with generated message (for debugging)
-geminielf git message --dry-run
+gelf git message --dry-run
 
 # Use specific model temporarily
-geminielf git message --model gemini-2.0-flash-exp
+gelf git message --model gemini-2.0-flash-exp
 ```
 
 ## 🔧 Technical Specifications
@@ -194,7 +194,7 @@ The interface features:
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key file | - | ✅ |
 | `VERTEXAI_PROJECT` | Google Cloud project ID | - | ✅ |
 | `VERTEXAI_LOCATION` | Vertex AI location | `us-central1` | ❌ |
-| `GEMINIELF_DEFAULT_MODEL` | Gemini model to use | `gemini-2.5-flash-preview-05-20` | ❌ |
+| `GELF_DEFAULT_MODEL` | Gemini model to use | `gemini-2.5-flash-preview-05-20` | ❌ |
 
 ## 🔨 Development
 

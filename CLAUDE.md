@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-geminielfは、Vertex AI (Gemini) を使用してGitコミットメッセージを自動生成するGo製CLIツールです。ステージングされた変更を分析し、Bubble Teaで構築されたインタラクティブなTUIインターフェースを通じて適切なコミットメッセージを生成します。
+gelfは、Vertex AI (Gemini) を使用してGitコミットメッセージを自動生成するGo製CLIツールです。ステージングされた変更を分析し、Bubble Teaで構築されたインタラクティブなTUIインターフェースを通じて適切なコミットメッセージを生成します。
 
 ## 開発環境セットアップ
 
@@ -51,7 +51,7 @@ main.go               # アプリケーションエントリーポイント
 - **対象**: ステージング済み変更のみ (`git diff --staged`)
 - **AIプロバイダー**: Vertex AI (Geminiモデル)
 - **デフォルトモデル**: gemini-2.5-flash-preview-05-20
-- **モデル設定**: 環境変数 `GEMINIELF_DEFAULT_MODEL` で変更可能
+- **モデル設定**: 環境変数 `GELF_DEFAULT_MODEL` で変更可能
 - **入力**: 生のgit diff出力 (フィルタリングなし)
 - **UIフレームワーク**: Bubble Tea (TUI用)
 - **ユーザーインタラクション**: シンプルなYes/No確認 (初期版では編集機能なし)
@@ -61,20 +61,20 @@ main.go               # アプリケーションエントリーポイント
 
 ```bash
 # Git関連AIタスク
-geminielf git commit      # Vertex AIを使ってステージング済み変更をコミット（TUI付き）
-geminielf git message     # コミットメッセージ生成のみ（外部ツール連携用）
-geminielf git message --dry-run  # diffも表示してデバッグ
-geminielf git message --model MODEL  # 一時的にモデルを変更
+gelf git commit      # Vertex AIを使ってステージング済み変更をコミット（TUI付き）
+gelf git message     # コミットメッセージ生成のみ（外部ツール連携用）
+gelf git message --dry-run  # diffも表示してデバッグ
+gelf git message --model MODEL  # 一時的にモデルを変更
 
 # ヘルプ
-geminielf --help          # ヘルプ表示
-geminielf git --help      # Git関連コマンドのヘルプ
+gelf --help          # ヘルプ表示
+gelf git --help      # Git関連コマンドのヘルプ
 ```
 
 ## 開発コマンド
 
 ```bash
-go mod init geminielf     # Goモジュール初期化
+go mod init gelf     # Goモジュール初期化
 go build                  # プロジェクトビルド
 go test ./...             # テスト実行
 go mod tidy               # 依存関係整理
@@ -107,4 +107,4 @@ devcontainerの設定：
 - `GOOGLE_APPLICATION_CREDENTIALS` - サービスアカウントキーへのパス
 - `VERTEXAI_PROJECT` - Google CloudプロジェクトID
 - `VERTEXAI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)
-- `GEMINIELF_DEFAULT_MODEL` - 使用するGeminiモデル (デフォルト: gemini-2.5-flash-preview-05-20)
+- `GELF_DEFAULT_MODEL` - 使用するGeminiモデル (デフォルト: gemini-2.5-flash-preview-05-20)

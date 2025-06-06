@@ -21,7 +21,7 @@ func Load() (*Config, error) {
 		location = "us-central1"
 	}
 
-	model := os.Getenv("GEMINIELF_DEFAULT_MODEL")
+	model := os.Getenv("GELF_DEFAULT_MODEL")
 	if model == "" {
 		model = "gemini-2.5-flash-preview-05-20"
 	}

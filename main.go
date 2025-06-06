@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"geminielf/cmd"
+	"gelf/cmd"
 )
 
 func main() {
