@@ -47,8 +47,6 @@ type msgCommitDone struct {
 	err error
 }
 
-type msgAutoQuit struct{}
-
 type msgProgressUpdate struct {
 	value float64
 }
@@ -232,14 +230,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.state = stateError
-			return m, m.autoQuitAfterDelay()
+			return m, tea.Quit
 		} else {
 			m.state = stateSuccess
-			return m, m.autoQuitAfterDelay()
+			return m, tea.Quit
 		}
 		
-	case msgAutoQuit:
-		return m, tea.Quit
 	}
 
 	// Update spinner
@@ -369,8 +365,6 @@ func (m *model) View() string {
 			"",
 			"✨ Your changes have been committed successfully!",
 			"🚀 The AI-generated message has been applied.",
-			"",
-			helpStyle.Render("⏱️  Closing in 2 seconds..."),
 		)
 		
 		successBox := successContainer.Render(successContent)
@@ -405,8 +399,6 @@ func (m *model) View() string {
 			"",
 			"💡 Please check your configuration and try again.",
 			"🔧 Make sure Git is properly configured.",
-			"",
-			helpStyle.Render("⏱️  Closing in 2 seconds..."),
 		)
 		
 		errorBox := errorContainer.Render(errorContent)
@@ -434,11 +426,6 @@ func (m *model) commitChanges() tea.Cmd {
 	})
 }
 
-func (m *model) autoQuitAfterDelay() tea.Cmd {
-	return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
-		return msgAutoQuit{}
-	})
-}
 
 // AI処理中のプログレス更新をシミュレート
 func (m *model) simulateProgress() tea.Cmd {
