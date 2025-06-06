@@ -5,8 +5,8 @@ geminielf is a Go-based CLI tool that automatically generates Git commit message
 ## ✨ Features
 
 - 🤖 **AI-Powered**: Intelligent commit message generation using Vertex AI (Gemini)
-- 🎨 **Modern TUI**: Beautiful and interactive user interface built with Bubble Tea
-- ⚡ **Fast Processing**: Real-time progress visualization with dynamic progress bars
+- 🎨 **Clean TUI**: Simple and intuitive user interface built with Bubble Tea  
+- ⚡ **Fast Processing**: Real-time progress indicators with percentage display
 - 🛡️ **Safe Operations**: Only operates on staged changes for secure workflow
 - 🌐 **Cross-Platform**: Works seamlessly across different operating systems
 
@@ -76,6 +76,7 @@ geminielf commit
 3. Interactive TUI operations:
    - Review the AI-generated commit message
    - Press `y` to approve or `n` to cancel
+   - Press `q` or `Ctrl+C` to cancel during generation
    - The commit will be executed automatically upon approval
 
 ### Command Options
@@ -130,56 +131,31 @@ internal/
 main.go             # Application entry point
 ```
 
-## 🎨 TUI Screens
+## 🎨 TUI Interface
 
 ### Loading Screen
 ```
-┌─────────────────────────────────────┐
-│ 🚀 geminielf                        │
-│ ⠙ Generating commit message...     │
-│                                     │
-│ 🧠 AI is analyzing your changes... │
-│ ████████████▒▒▒▒ 75%              │
-└─────────────────────────────────────┘
+⠙ Generating commit message... (75%)
 ```
 
 ### Confirmation Screen
 ```
-┌─────────────────────────────────────┐
-│ 🚀 geminielf                        │
-│                                     │
-│ 📝 Generated Commit Message:       │
-│ ┌─────────────────────────────────┐ │
-│ │ feat: add user authentication   │ │
-│ │ system with JWT support         │ │
-│ └─────────────────────────────────┘ │
-│                                     │
-│ 🤔 Commit with this message?       │
-│ ✓ Yes (y)  ✗ No (n)               │
-│ Press 'y' to commit or 'n' to cancel │
-└─────────────────────────────────────┘
+feat: add user authentication system with JWT support
+
+Commit this message? (y)es / (n)o
 ```
 
 ### Success Screen
 ```
-┌─────────────────────────────────────┐
-│ 🚀 geminielf                        │
-│                                     │
-│ 🎉 Success!                        │
-│                                     │
-│ ✨ Your changes have been committed │
-│ successfully!                       │
-│                                     │
-│ 📝 Committed with message:         │
-│ ┌─────────────────────────────────┐ │
-│ │ feat: add user authentication   │ │
-│ │ system with JWT support         │ │
-│ └─────────────────────────────────┘ │
-│                                     │
-│ 🚀 The AI-generated message has    │
-│ been applied.                       │
-└─────────────────────────────────────┘
+✓ Committed: feat: add user authentication system with JWT support
 ```
+
+The interface features:
+- **Orange text** for loading messages with progress percentages
+- **Italic styling** for generated commit messages  
+- **Dimmed text** for user prompts
+- **Green text** for success confirmations
+- **Red text** for error messages
 
 ## 🌍 Environment Variables
 
