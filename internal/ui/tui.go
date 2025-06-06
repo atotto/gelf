@@ -39,6 +39,7 @@ type msgCommitDone struct {
 	err error
 }
 
+
 var (
 	titleStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FAFAFA")).
@@ -102,6 +103,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.state = stateSuccess
 		}
+		return m, tea.Quit
 	}
 
 	return m, nil
@@ -146,6 +148,7 @@ func (m *model) commitChanges() tea.Cmd {
 		return msgCommitDone{err: err}
 	})
 }
+
 
 func (m *model) Run() error {
 	p := tea.NewProgram(m)
