@@ -47,6 +47,8 @@ type msgProgressUpdate struct {
 	progress float64
 }
 
+type msgDelayedExit struct{}
+
 
 
 var (
@@ -121,9 +123,13 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.state = stateError
+			return m, tea.Quit
 		} else {
 			m.state = stateSuccess
+			return m, m.delayedExit()
 		}
+
+	case msgDelayedExit:
 		return m, tea.Quit
 	}
 
@@ -195,6 +201,12 @@ func (m *model) updateProgress() tea.Cmd {
 			return msgProgressUpdate{progress: newProgress}
 		}
 		return nil
+	})
+}
+
+func (m *model) delayedExit() tea.Cmd {
+	return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
+		return msgDelayedExit{}
 	})
 }
 
