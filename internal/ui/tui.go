@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"geminielf/internal/ai"
 	"geminielf/internal/git"
@@ -30,6 +31,7 @@ type model struct {
 	err           error
 	state         state
 	spinner       spinner.Model
+	progress      float64
 }
 
 type msgCommitGenerated struct {
@@ -39,6 +41,10 @@ type msgCommitGenerated struct {
 
 type msgCommitDone struct {
 	err error
+}
+
+type msgProgressUpdate struct {
+	progress float64
 }
 
 
@@ -74,7 +80,7 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.generateCommitMessage())
+	return tea.Batch(m.spinner.Tick, m.generateCommitMessage(), m.updateProgress())
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -87,12 +93,19 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y", "Y":
 				m.state = stateCommitting
-				return m, tea.Batch(m.spinner.Tick, m.commitChanges())
+				m.progress = 0.0
+				return m, tea.Batch(m.spinner.Tick, m.commitChanges(), m.updateProgress())
 			case "n", "N", "q", "ctrl+c":
 				return m, tea.Quit
 			}
 		case stateSuccess, stateError:
 			return m, tea.Quit
+		}
+
+	case msgProgressUpdate:
+		m.progress = msg.progress
+		if m.state == stateLoading || m.state == stateCommitting {
+			return m, m.updateProgress()
 		}
 
 	case msgCommitGenerated:
@@ -126,16 +139,15 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
-		return fmt.Sprintf("%s Generating commit message...", m.spinner.View())
+		return fmt.Sprintf("%s Generating commit message... (%.0f%%)", m.spinner.View(), m.progress*100)
 
 	case stateConfirm:
-		return fmt.Sprintf("%s\n\n%s\n\n%s",
+		return fmt.Sprintf("%s\nCommit this message? %s",
 			messageStyle.Render(m.commitMessage),
-			"Commit this message?",
 			promptStyle.Render("(y)es / (n)o"))
 
 	case stateCommitting:
-		return fmt.Sprintf("%s Committing changes...", m.spinner.View())
+		return fmt.Sprintf("%s Committing changes... (%.0f%%)", m.spinner.View(), m.progress*100)
 
 	case stateSuccess:
 		return successStyle.Render(fmt.Sprintf("Committed: %s", m.commitMessage))
@@ -162,6 +174,27 @@ func (m *model) commitChanges() tea.Cmd {
 	return tea.Cmd(func() tea.Msg {
 		err := git.CommitChanges(m.commitMessage)
 		return msgCommitDone{err: err}
+	})
+}
+
+func (m *model) updateProgress() tea.Cmd {
+	return tea.Tick(time.Millisecond*100, func(t time.Time) tea.Msg {
+		if m.state == stateLoading {
+			// Progress gradually increases to 90% max during loading
+			newProgress := m.progress + 0.02
+			if newProgress > 0.9 {
+				newProgress = 0.9
+			}
+			return msgProgressUpdate{progress: newProgress}
+		} else if m.state == stateCommitting {
+			// Faster progress during commit
+			newProgress := m.progress + 0.1
+			if newProgress > 1.0 {
+				newProgress = 1.0
+			}
+			return msgProgressUpdate{progress: newProgress}
+		}
+		return nil
 	})
 }
 
