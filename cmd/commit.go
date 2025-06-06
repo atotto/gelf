@@ -9,6 +9,7 @@ import (
 	"geminielf/internal/git"
 	"geminielf/internal/ui"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,16 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	}
 
 	if diff == "" {
-		fmt.Println("No staged changes found. Please stage some changes first with 'git add'.")
+		warningStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("3")).
+			Bold(true).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("3")).
+			Padding(0, 1).
+			Margin(1, 0)
+		
+		message := warningStyle.Render("⚠ No staged changes found. Please stage some changes first with 'git add'.")
+		fmt.Print(message + "\n")
 		return nil
 	}
 
