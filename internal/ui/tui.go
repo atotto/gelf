@@ -66,9 +66,8 @@ var (
 	confirmStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#667eea")).
-			Padding(3, 4).
-			Margin(1, 2).
-			Width(70).
+			Padding(1, 2).
+			Width(60).
 			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
@@ -79,8 +78,7 @@ var (
 	commitMessageStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#E6EDF3")).
 			Background(lipgloss.Color("#21262D")).
-			Padding(1, 2).
-			Margin(1, 0).
+			Padding(0, 1).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#30363D")).
 			Italic(true)
@@ -125,14 +123,12 @@ var (
 	// ローディングスタイル
 	loadingStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#667eea")).
-			Bold(true).
-			Margin(1, 0)
+			Bold(true)
 
 	// ヘルプテキストスタイル
 	helpStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#8B949E")).
-			Align(lipgloss.Center).
-			MarginTop(1)
+			Align(lipgloss.Center)
 
 )
 
@@ -145,7 +141,7 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	prog := progress.New(progress.WithDefaultGradient())
 	prog.Full = '█'
 	prog.Empty = '░'
-	prog.Width = 60
+	prog.Width = 40
 	
 	return &model{
 		aiClient:      aiClient,
@@ -237,9 +233,8 @@ func (m *model) View() string {
 		progressContainer := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#667eea")).
-			Padding(2, 3).
-			Margin(1, 2).
-			Width(70).
+			Padding(1, 2).
+			Width(50).
 			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
@@ -249,9 +244,6 @@ func (m *model) View() string {
 		progressContent := lipgloss.JoinVertical(lipgloss.Center,
 			"🚀 geminielf",
 			loadingText,
-			"",
-			"🧠 AI is analyzing your changes...",
-			"",
 			progressBar,
 			fmt.Sprintf("%.0f%%", m.progressValue*100),
 		)
@@ -269,11 +261,7 @@ func (m *model) View() string {
 		
 		content := lipgloss.JoinVertical(lipgloss.Center,
 			"🚀 geminielf",
-			"",
-			"📝 Generated Commit Message:",
 			messageBox,
-			"",
-			"🤔 Commit with this message?",
 			buttons,
 			helpText,
 		)
@@ -289,9 +277,8 @@ func (m *model) View() string {
 		commitContainer := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#28a745")).
-			Padding(2, 3).
-			Margin(1, 2).
-			Width(70).
+			Padding(1, 2).
+			Width(50).
 			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
@@ -301,9 +288,6 @@ func (m *model) View() string {
 		commitContent := lipgloss.JoinVertical(lipgloss.Center,
 			"🚀 geminielf",
 			committingText,
-			"",
-			"💾 Applying changes to repository...",
-			"",
 			progressBar,
 			fmt.Sprintf("%.0f%%", m.progressValue*100),
 		)
@@ -317,16 +301,14 @@ func (m *model) View() string {
 			Foreground(lipgloss.Color("#28a745")).
 			Bold(true).
 			Align(lipgloss.Center).
-			MarginBottom(1).
 			Render("🎉 Success!")
 		
 		// 成功メッセージコンテナ
 		successContainer := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#28a745")).
-			Padding(3, 4).
-			Margin(1, 2).
-			Width(80).
+			Padding(1, 2).
+			Width(60).
 			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
@@ -338,15 +320,8 @@ func (m *model) View() string {
 		
 		successContent := lipgloss.JoinVertical(lipgloss.Center,
 			"🚀 geminielf",
-			"",
 			successTitle,
-			"",
-			"✨ Your changes have been committed successfully!",
-			"",
-			"📝 Committed with message:",
 			commitedMessageBox,
-			"",
-			"🚀 The AI-generated message has been applied.",
 		)
 		
 		successBox := successContainer.Render(successContent)
@@ -358,16 +333,14 @@ func (m *model) View() string {
 			Foreground(lipgloss.Color("#dc3545")).
 			Bold(true).
 			Align(lipgloss.Center).
-			MarginBottom(1).
 			Render("❌ Error Occurred")
 		
 		// エラーメッセージコンテナ
 		errorContainer := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#dc3545")).
-			Padding(3, 4).
-			Margin(1, 2).
-			Width(70).
+			Padding(1, 2).
+			Width(60).
 			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
@@ -376,13 +349,8 @@ func (m *model) View() string {
 		
 		errorContent := lipgloss.JoinVertical(lipgloss.Center,
 			"🚀 geminielf",
-			"",
 			errorTitle,
-			"",
-			fmt.Sprintf("🔍 Details: %v", m.err),
-			"",
-			"💡 Please check your configuration and try again.",
-			"🔧 Make sure Git is properly configured.",
+			fmt.Sprintf("🔍 %v", m.err),
 		)
 		
 		errorBox := errorContainer.Render(errorContent)
