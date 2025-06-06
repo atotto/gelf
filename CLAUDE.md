@@ -6,16 +6,6 @@
 
 geminielfは、Vertex AI (Gemini) を使用してGitコミットメッセージを自動生成するGo製CLIツールです。ステージングされた変更を分析し、Bubble Teaで構築されたインタラクティブなTUIインターフェースを通じて適切なコミットメッセージを生成します。
 
-## 開発環境
-
-このプロジェクトは以下の構成のdevcontainerを使用します：
-- Ubuntu 24.04ベースイメージ
-- Go開発ツールがインストール済み
-- Node.js LTS
-- GitHub CLI
-- zsh with oh-my-zsh設定
-- 日本語ロケールサポート
-
 ## 開発環境セットアップ
 
 devcontainerは`.devcontainer/setup.sh`を自動実行し、以下を設定します：
