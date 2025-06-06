@@ -89,20 +89,6 @@ geminielf --help
 geminielf commit --help
 ```
 
-## 🎯 Workflow
-
-```mermaid
-graph TD
-    A[git add .] --> B[geminielf commit]
-    B --> C[Check staged changes]
-    C --> D[AI analyzes diff]
-    D --> E[Generate commit message]
-    E --> F[User confirmation]
-    F -->|Yes| G[Execute git commit]
-    F -->|No| H[Cancel]
-    G --> I[Show completion]
-```
-
 ## 🔧 Technical Specifications
 
 ### Architecture
