@@ -121,27 +121,56 @@ main.go             # Application entry point
 
 ### Loading Screen
 ```
-⠙ Generating commit message... (75%)
+┌─────────────────────────────────────────┐
+│ ⠙ Generating commit message...         │
+│                                         │
+│ ████████████████░░░░░░░░░░░░░░ 75%      │
+└─────────────────────────────────────────┘
 ```
 
 ### Confirmation Screen
 ```
-feat: add user authentication system with JWT support
+┌──────────────────────────────────────────────┐
+│ 📝 Generated Commit Message:                │
+│ ┌──────────────────────────────────────────┐ │
+│ │ feat: add user authentication system    │ │
+│ │ with JWT support                         │ │
+│ └──────────────────────────────────────────┘ │
+│ Commit this message? (y)es / (n)o            │
+└──────────────────────────────────────────────┘
+```
 
-Commit this message? (y)es / (n)o
+### Committing Screen
+```
+┌─────────────────────────────────────────┐
+│ ⠙ Committing changes...                │
+│                                         │
+│ ██████████████████████████████ 100%    │
+└─────────────────────────────────────────┘
 ```
 
 ### Success Screen
 ```
-✓ Committed: feat: add user authentication system with JWT support
+┌─────────────────────────────────────────────────┐
+│ ✓ Committed: feat: add user authentication     │
+│   system with JWT support                       │
+└─────────────────────────────────────────────────┘
+```
+
+### Error Screen
+```
+┌─────────────────────────────────────────┐
+│ ✗ Error: No staged changes found       │
+└─────────────────────────────────────────┘
 ```
 
 The interface features:
-- **Orange text** for loading messages with progress percentages
-- **Italic styling** for generated commit messages  
-- **Dimmed text** for user prompts
-- **Green text** for success confirmations
-- **Red text** for error messages
+- **Cyan colored** loading messages with animated spinners
+- **Blue progress bars** with percentage indicators
+- **Rounded border frames** for all states
+- **Background colored boxes** for commit messages
+- **Color-coded states**: Cyan for loading, Blue for confirmation, Green for success, Red for errors
+- **Icon prefixes**: 📝 for messages, ✓ for success, ✗ for errors
 
 ## 🌍 Environment Variables
 
