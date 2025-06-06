@@ -32,6 +32,7 @@ type model struct {
 	state         state
 	spinner       spinner.Model
 	progress      float64
+	startTime     time.Time
 }
 
 type msgCommitGenerated struct {
@@ -112,10 +113,11 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 	
 	return &model{
-		aiClient: aiClient,
-		diff:     diff,
-		state:    stateLoading,
-		spinner:  s,
+		aiClient:  aiClient,
+		diff:      diff,
+		state:     stateLoading,
+		spinner:   s,
+		startTime: time.Now(),
 	}
 }
 
@@ -139,6 +141,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "y", "Y":
 				m.state = stateCommitting
 				m.progress = 0.0
+				m.startTime = time.Now()
 				return m, tea.Batch(m.spinner.Tick, m.commitChanges(), m.updateProgress())
 			case "n", "N", "q", "ctrl+c":
 				return m, tea.Quit
@@ -160,6 +163,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.commitMessage = msg.message
 			m.state = stateConfirm
+			m.progress = 1.0 // Complete progress when AI response received
 		}
 
 	case msgCommitDone:
@@ -168,6 +172,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = stateError
 		} else {
 			m.state = stateSuccess
+			m.progress = 1.0 // Complete progress when commit done
 		}
 		return m, tea.Quit
 	}
@@ -248,19 +253,23 @@ func (m *model) commitChanges() tea.Cmd {
 }
 
 func (m *model) updateProgress() tea.Cmd {
-	return tea.Tick(time.Millisecond*100, func(t time.Time) tea.Msg {
+	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
 		if m.state == stateLoading {
-			// Progress gradually increases to 90% max during loading
-			newProgress := m.progress + 0.02
-			if newProgress > 0.9 {
-				newProgress = 0.9
+			// Progress based on elapsed time (estimate: AI response takes ~5-10 seconds)
+			elapsed := time.Since(m.startTime).Seconds()
+			estimatedDuration := 8.0 // 8 seconds estimate
+			newProgress := elapsed / estimatedDuration
+			if newProgress > 0.95 {
+				newProgress = 0.95 // Cap at 95% until actual completion
 			}
 			return msgProgressUpdate{progress: newProgress}
 		} else if m.state == stateCommitting {
-			// Faster progress during commit
-			newProgress := m.progress + 0.1
-			if newProgress > 1.0 {
-				newProgress = 1.0
+			// Progress based on elapsed time (estimate: commit takes ~1-2 seconds)
+			elapsed := time.Since(m.startTime).Seconds()
+			estimatedDuration := 1.5 // 1.5 seconds estimate
+			newProgress := elapsed / estimatedDuration
+			if newProgress > 0.95 {
+				newProgress = 0.95 // Cap at 95% until actual completion
 			}
 			return msgProgressUpdate{progress: newProgress}
 		}
