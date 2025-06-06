@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"gelf/cmd/git"
+	"github.com/EkeMinusYou/gelf/cmd/git"
 
 	"github.com/spf13/cobra"
 )

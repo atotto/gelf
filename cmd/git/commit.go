@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"gelf/internal/ai"
-	"gelf/internal/config"
-	"gelf/internal/git"
-	"gelf/internal/ui"
+	"github.com/EkeMinusYou/gelf/internal/ai"
+	"github.com/EkeMinusYou/gelf/internal/config"
+	"github.com/EkeMinusYou/gelf/internal/git"
+	"github.com/EkeMinusYou/gelf/internal/ui"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"

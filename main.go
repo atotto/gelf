@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"gelf/cmd"
+	"github.com/EkeMinusYou/gelf/cmd"
 )
 
 func main() {

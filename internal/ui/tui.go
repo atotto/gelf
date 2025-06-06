@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"gelf/internal/ai"
-	"gelf/internal/git"
+	"github.com/EkeMinusYou/gelf/internal/ai"
+	"github.com/EkeMinusYou/gelf/internal/git"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"

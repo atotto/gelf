@@ -1,4 +1,4 @@
-module gelf
+module github.com/EkeMinusYou/gelf
 
 go 1.24.3
 
