@@ -51,7 +51,7 @@ type msgProgressUpdate struct {
 
 
 var (
-	// シンプルなスタイル
+	// エレガントなスタイル
 	titleStyle = lipgloss.NewStyle().Bold(true)
 	
 	messageStyle = lipgloss.NewStyle().
@@ -66,11 +66,26 @@ var (
 
 	errorStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("1"))
+
+	// 生成中の洗練されたスタイル
+	generatingStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("6")).
+		Bold(true)
+
+	progressBarStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("4"))
+
+	loadingFrameStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("6")).
+		Padding(0, 1).
+		Margin(1, 0)
 )
 
 func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s := spinner.New()
-	s.Spinner = spinner.Dot
+	s.Spinner = spinner.Points
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 	
 	return &model{
 		aiClient: aiClient,
@@ -145,7 +160,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
-		return fmt.Sprintf("%s Generating commit message... (%.0f%%)", m.spinner.View(), m.progress*100)
+		progressBar := m.renderProgressBar(m.progress)
+		content := fmt.Sprintf("%s %s\n\n%s",
+			m.spinner.View(),
+			generatingStyle.Render("Generating commit message..."),
+			progressBar)
+		return loadingFrameStyle.Render(content)
 
 	case stateConfirm:
 		return fmt.Sprintf("%s\nCommit this message? %s",
@@ -153,7 +173,12 @@ func (m *model) View() string {
 			promptStyle.Render("(y)es / (n)o"))
 
 	case stateCommitting:
-		return fmt.Sprintf("%s Committing changes... (%.0f%%)", m.spinner.View(), m.progress*100)
+		progressBar := m.renderProgressBar(m.progress)
+		content := fmt.Sprintf("%s %s\n\n%s",
+			m.spinner.View(),
+			generatingStyle.Render("Committing changes..."),
+			progressBar)
+		return loadingFrameStyle.Render(content)
 
 	case stateSuccess:
 		return ""
@@ -163,6 +188,18 @@ func (m *model) View() string {
 	}
 
 	return ""
+}
+
+func (m *model) renderProgressBar(progress float64) string {
+	width := 30
+	filled := int(progress * float64(width))
+	
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
+	percentage := fmt.Sprintf("%.0f%%", progress*100)
+	
+	return fmt.Sprintf("%s %s",
+		progressBarStyle.Render(bar),
+		progressBarStyle.Render(percentage))
 }
 
 func (m *model) generateCommitMessage() tea.Cmd {
