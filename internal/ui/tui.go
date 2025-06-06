@@ -150,7 +150,7 @@ func (m *model) View() string {
 		return fmt.Sprintf("%s Committing changes... (%.0f%%)", m.spinner.View(), m.progress*100)
 
 	case stateSuccess:
-		return successStyle.Render(fmt.Sprintf("Committed: %s", m.commitMessage))
+		return successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage))
 
 	case stateError:
 		return errorStyle.Render(fmt.Sprintf("Error: %v", m.err))
