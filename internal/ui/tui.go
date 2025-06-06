@@ -52,20 +52,37 @@ type msgProgressUpdate struct {
 
 var (
 	// エレガントなスタイル
-	titleStyle = lipgloss.NewStyle().Bold(true)
+	titleStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("6"))
 	
 	messageStyle = lipgloss.NewStyle().
-		Padding(1, 0).
-		Italic(true)
+		Padding(0, 1).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("8")).
+		Background(lipgloss.Color("235")).
+		Margin(0)
+
+	commitMessageHeaderStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("6"))
 
 	promptStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240"))
+		Foreground(lipgloss.Color("4")).
+		Bold(true).
+		Margin(1, 0, 0, 0)
 
 	successStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("2"))
+		Foreground(lipgloss.Color("2")).
+		Bold(true)
 
 	errorStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("1"))
+		Foreground(lipgloss.Color("1")).
+		Bold(true).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("1")).
+		Padding(0, 1).
+		Margin(1, 0)
 
 	// 生成中の洗練されたスタイル
 	generatingStyle = lipgloss.NewStyle().
@@ -79,6 +96,12 @@ var (
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("6")).
 		Padding(0, 1).
+		Margin(1, 0)
+
+	confirmFrameStyle = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("4")).
+		Padding(1, 2).
 		Margin(1, 0)
 )
 
@@ -168,9 +191,12 @@ func (m *model) View() string {
 		return loadingFrameStyle.Render(content)
 
 	case stateConfirm:
-		return fmt.Sprintf("%s\nCommit this message? %s",
-			messageStyle.Render(m.commitMessage),
-			promptStyle.Render("(y)es / (n)o"))
+		header := commitMessageHeaderStyle.Render("📝 Generated Commit Message:")
+		message := messageStyle.Render(m.commitMessage)
+		prompt := promptStyle.Render("Commit this message? (y)es / (n)o")
+		
+		content := fmt.Sprintf("%s\n%s\n%s", header, message, prompt)
+		return confirmFrameStyle.Render(content)
 
 	case stateCommitting:
 		progressBar := m.renderProgressBar(m.progress)
@@ -184,7 +210,7 @@ func (m *model) View() string {
 		return ""
 
 	case stateError:
-		return errorStyle.Render(fmt.Sprintf("Error: %v", m.err))
+		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
 	}
 
 	return ""
@@ -251,7 +277,14 @@ func (m *model) Run() error {
 	
 	// Print success message after TUI exits so it remains visible
 	if m.state == stateSuccess {
-		fmt.Print(successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage)) + "\n")
+		successFrame := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("2")).
+			Padding(0, 1).
+			Margin(1, 0)
+		
+		successMessage := successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage))
+		fmt.Print(successFrame.Render(successMessage) + "\n")
 	}
 	
 	return err
