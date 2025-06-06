@@ -1,0 +1,62 @@
+// See: 「devcontainer活用のススメ」 https://groove-x.atlassian.net/wiki/spaces/PORTAL/pages/3536551977/devcontainer
+{
+  "name": "Claude Code Hands-on",
+
+  // Microsoft 提供の Dev Containers 用 Ubuntu 24.04
+  // デフォルトで 'vscode' ユーザー (UID/GID 1000) と基本ツールが含まれる
+  "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:latest": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/aquaproj/devcontainer-features/aqua-installer:0.1.2": {
+      "aqua_version": "v2.48.1"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+
+    // コンテナ内で便利なので zsh と oh-my-szh を有効化
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "true",
+      "configureZshAsDefaultShell": "true",
+      "installOhMyZsh": "true",
+      "installOhMyZshConfig": "true",
+      "upgradePackages": "false",
+      "configureGpg": "false"
+    }
+  },
+
+  "mounts": [
+    // .gitconfig のマウント設定
+    // - type=bind: ホストのパスを直接マウント
+    // - source: ホスト側のパス
+    // - target: コンテナ側のパス (現在のユーザー 'vscode' のホーム)
+    // - readonly: 読み取り専用 (ホスト改変リスク低減のため)
+    "type=bind,source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,readonly",
+    // 他にもマウントしたいファイル/ディレクトリがあればここに追加
+    // 例: ホストの ~/.ssh をコンテナにマウントする場合 (SSH鍵利用)
+    "type=bind,source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,readonly"
+  ],
+
+  "postCreateCommand": "chmod +x .devcontainer/setup.sh && .devcontainer/setup.sh",
+
+  "customizations": {
+    "jetbrains": {
+      "plugins": [
+        "com.github.biomejs.intellijbiome",
+        "com.github.shiraji.findpullrequest",
+        "com.intellij.tailwindcss",
+        "intellij.nextjs",
+        "intellij.vitejs",
+        "org.toml.lang",
+        "PythonCore"
+      ]
+    }
+  },
+
+  "containerEnv": {
+    "GOPROXY": "direct",
+    "GOPRIVATE": "github.com/groove-x"
+  }
+}
