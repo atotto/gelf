@@ -70,7 +70,7 @@ git add .
 
 2. Run geminielf:
 ```bash
-geminielf commit
+geminielf git commit
 ```
 
 3. Interactive TUI operations:
@@ -85,8 +85,20 @@ geminielf commit
 # Show help
 geminielf --help
 
-# Show commit subcommand help
-geminielf commit --help
+# Show git subcommand help
+geminielf git --help
+
+# Show git commit subcommand help
+geminielf git commit --help
+
+# Generate commit message only (for external tool integration)
+geminielf git message
+
+# Show diff with generated message (for debugging)
+geminielf git message --dry-run
+
+# Use specific model temporarily
+geminielf git message --model gemini-2.0-flash-exp
 ```
 
 ## 🔧 Technical Specifications
@@ -104,16 +116,19 @@ geminielf commit --help
 ```
 cmd/
 ├── root.go          # Root command definition
-└── commit.go        # Commit subcommand implementation
+└── git/
+    ├── git.go       # Git subcommand group
+    ├── commit.go    # git commit subcommand implementation
+    └── message.go   # git message subcommand implementation
 internal/
 ├── git/
 │   └── diff.go      # Git operations (git diff --staged)
 ├── ai/
-│   └── vertex.go    # Vertex AI integration
+│   └── vertex.go    # Vertex AI integration for message generation
 ├── ui/
 │   └── tui.go       # Bubble Tea TUI implementation
 └── config/
-    └── config.go    # Configuration management
+    └── config.go    # Configuration management (API keys etc)
 main.go             # Application entry point
 ```
 
@@ -205,16 +220,17 @@ go mod tidy
 go build                  # Build the project
 go test ./...             # Run tests
 go mod tidy               # Tidy dependencies
-go run main.go commit     # Run in development
+go run main.go git commit    # Run in development
+go run main.go git message   # Run message generation only
 ```
 
 ## 📦 Dependencies
 
 ### Main Dependencies
-- [`cloud.google.com/go/vertexai`](https://pkg.go.dev/cloud.google.com/go/vertexai) - Vertex AI client
+- [`google.golang.org/genai`](https://pkg.go.dev/google.golang.org/genai) - Official Gemini Go client
 - [`github.com/charmbracelet/bubbletea`](https://github.com/charmbracelet/bubbletea) - TUI framework
 - [`github.com/charmbracelet/lipgloss`](https://github.com/charmbracelet/lipgloss) - Styling and layout
-- [`github.com/charmbracelet/bubbles`](https://github.com/charmbracelet/bubbles) - TUI components
+- [`github.com/charmbracelet/bubbles`](https://github.com/charmbracelet/bubbles) - TUI components (spinner)
 - [`github.com/spf13/cobra`](https://github.com/spf13/cobra) - CLI framework
 
 ## 🤝 Contributing
