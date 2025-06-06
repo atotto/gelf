@@ -11,9 +11,7 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts"
     },
-    "ghcr.io/aquaproj/devcontainer-features/aqua-installer:0.1.2": {
-      "aqua_version": "v2.48.1"
-    },
+    "ghcr.io/devcontainers/features/go:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
 
     // コンテナ内で便利なので zsh と oh-my-szh を有効化
