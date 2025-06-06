@@ -34,7 +34,8 @@ devcontainerは`.devcontainer/setup.sh`を自動実行し、以下を設定し�
 ### プロジェクト構造
 ```
 cmd/
-  └── root.go          # メインコマンドエントリーポイント
+  ├── root.go          # ルートコマンド定義
+  └── commit.go        # commitサブコマンド実装
 internal/
   ├── git/
   │   └── diff.go      # Git操作 (git diff --staged)
@@ -56,10 +57,19 @@ main.go               # アプリケーションエントリーポイント
 ### 技術仕様
 - **対象**: ステージング済み変更のみ (`git diff --staged`)
 - **AIプロバイダー**: Vertex AI (Geminiモデル)
+- **デフォルトモデル**: gemini-2.5-flash-preview-05-20
+- **モデル設定**: 環境変数 `GEMINIELF_DEFAULT_MODEL` で変更可能
 - **入力**: 生のgit diff出力 (フィルタリングなし)
 - **UIフレームワーク**: Bubble Tea (TUI用)
 - **ユーザーインタラクション**: シンプルなYes/No確認 (初期版では編集機能なし)
 - **エラーハンドリング**: 最小限 (初期版では優先度低)
+
+## コマンド使用法
+
+```bash
+geminielf commit          # Vertex AIを使ってステージング済み変更をコミット
+geminielf --help          # ヘルプ表示
+```
 
 ## 開発コマンド
 
@@ -68,7 +78,7 @@ go mod init geminielf     # Goモジュール初期化
 go build                  # プロジェクトビルド
 go test ./...             # テスト実行
 go mod tidy               # 依存関係整理
-go run main.go            # アプリケーション実行
+go run main.go commit     # アプリケーション実行 (commitサブコマンド)
 ```
 
 ## 依存関係
@@ -77,14 +87,14 @@ go run main.go            # アプリケーション実行
 - `github.com/charmbracelet/bubbletea` - TUIフレームワーク
 - `github.com/charmbracelet/lipgloss` - スタイリングとレイアウト
 - `cloud.google.com/go/vertexai/genai` - Vertex AIクライアント
-- `github.com/spf13/cobra` - CLIフレームワーク (オプション)
+- `github.com/spf13/cobra` - CLIフレームワーク (サブコマンド実装用)
 
 ## 設定
 
 アプリケーションには以下のVertex AI設定が必要です：
 - Google Cloud プロジェクトID
 - Vertex AI API認証情報
-- モデル選択 (gemini-pro など)
+- モデル選択 (デフォルト: gemini-2.5-flash-preview-05-20)
 
 ## 環境変数
 
@@ -96,3 +106,4 @@ devcontainerの設定：
 - `GOOGLE_APPLICATION_CREDENTIALS` - サービスアカウントキーへのパス
 - `VERTEX_AI_PROJECT_ID` - Google CloudプロジェクトID
 - `VERTEX_AI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)
+- `GEMINIELF_DEFAULT_MODEL` - 使用するGeminiモデル (デフォルト: gemini-2.5-flash-preview-05-20)
