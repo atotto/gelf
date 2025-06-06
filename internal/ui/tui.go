@@ -90,6 +90,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch m.state {
+		case stateLoading:
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
 		case stateConfirm:
 			switch msg.String() {
 			case "y", "Y":
