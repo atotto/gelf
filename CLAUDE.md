@@ -76,7 +76,7 @@ go run main.go commit     # アプリケーション実行 (commitサブコマ�
 必要な主要Goモジュール：
 - `github.com/charmbracelet/bubbletea` - TUIフレームワーク
 - `github.com/charmbracelet/lipgloss` - スタイリングとレイアウト
-- `cloud.google.com/go/vertexai/genai` - Vertex AIクライアント
+- `google.golang.org/genai` - Vertex AIクライアント
 - `github.com/spf13/cobra` - CLIフレームワーク (サブコマンド実装用)
 
 ## 設定
