@@ -47,7 +47,6 @@ type msgProgressUpdate struct {
 	progress float64
 }
 
-type msgDelayedExit struct{}
 
 
 
@@ -123,13 +122,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.state = stateError
-			return m, tea.Quit
 		} else {
 			m.state = stateSuccess
-			return m, m.delayedExit()
 		}
-
-	case msgDelayedExit:
 		return m, tea.Quit
 	}
 
@@ -156,7 +151,7 @@ func (m *model) View() string {
 		return fmt.Sprintf("%s Committing changes... (%.0f%%)", m.spinner.View(), m.progress*100)
 
 	case stateSuccess:
-		return successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage))
+		return ""
 
 	case stateError:
 		return errorStyle.Render(fmt.Sprintf("Error: %v", m.err))
@@ -204,11 +199,6 @@ func (m *model) updateProgress() tea.Cmd {
 	})
 }
 
-func (m *model) delayedExit() tea.Cmd {
-	return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
-		return msgDelayedExit{}
-	})
-}
 
 
 
@@ -216,6 +206,12 @@ func (m *model) delayedExit() tea.Cmd {
 func (m *model) Run() error {
 	p := tea.NewProgram(m)
 	_, err := p.Run()
+	
+	// Print success message after TUI exits so it remains visible
+	if m.state == stateSuccess {
+		fmt.Print(successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage)) + "\n")
+	}
+	
 	return err
 }
 
