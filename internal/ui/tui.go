@@ -61,7 +61,8 @@ var (
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("8")).
 		Background(lipgloss.Color("235")).
-		Margin(0)
+		Margin(0).
+		Italic(true)
 
 	commitMessageHeaderStyle = lipgloss.NewStyle().
 		Bold(true).
@@ -195,7 +196,7 @@ func (m *model) View() string {
 		message := messageStyle.Render(m.commitMessage)
 		prompt := promptStyle.Render("Commit this message? (y)es / (n)o")
 		
-		content := fmt.Sprintf("%s\n%s\n%s", header, message, prompt)
+		content := fmt.Sprintf("%s\n\n%s\n%s", header, message, prompt)
 		return confirmFrameStyle.Render(content)
 
 	case stateCommitting:
