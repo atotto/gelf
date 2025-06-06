@@ -25,7 +25,10 @@ devcontainerは`.devcontainer/setup.sh`を自動実行し、以下を設定し�
 ```
 cmd/
   ├── root.go          # ルートコマンド定義
-  └── commit.go        # commitサブコマンド実装
+  └── git/
+      ├── git.go       # gitサブコマンドグループ
+      ├── commit.go    # git commitサブコマンド実装
+      └── message.go   # git messageサブコマンド実装
 internal/
   ├── git/
   │   └── diff.go      # Git操作 (git diff --staged)
@@ -57,8 +60,15 @@ main.go               # アプリケーションエントリーポイント
 ## コマンド使用法
 
 ```bash
-geminielf commit          # Vertex AIを使ってステージング済み変更をコミット
+# Git関連AIタスク
+geminielf git commit      # Vertex AIを使ってステージング済み変更をコミット（TUI付き）
+geminielf git message     # コミットメッセージ生成のみ（外部ツール連携用）
+geminielf git message --dry-run  # diffも表示してデバッグ
+geminielf git message --model MODEL  # 一時的にモデルを変更
+
+# ヘルプ
 geminielf --help          # ヘルプ表示
+geminielf git --help      # Git関連コマンドのヘルプ
 ```
 
 ## 開発コマンド
@@ -68,7 +78,8 @@ go mod init geminielf     # Goモジュール初期化
 go build                  # プロジェクトビルド
 go test ./...             # テスト実行
 go mod tidy               # 依存関係整理
-go run main.go commit     # アプリケーション実行 (commitサブコマンド)
+go run main.go git commit    # アプリケーション実行 (git commitサブコマンド)
+go run main.go git message   # アプリケーション実行 (git messageサブコマンド)
 ```
 
 ## 依存関係

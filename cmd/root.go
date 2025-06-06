@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"geminielf/cmd/git"
+
 	"github.com/spf13/cobra"
 )
 
@@ -16,5 +18,5 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.AddCommand(commitCmd)
+	rootCmd.AddCommand(git.GitCmd)
 }

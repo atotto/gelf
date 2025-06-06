@@ -8,7 +8,12 @@
       "Bash(go get:*)",
       "Bash(go build:*)",
       "Bash(go mod:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(./geminielf git --help)",
+      "Bash(./geminielf git message --help)",
+      "Bash(./geminielf commit:*)"
     ],
     "deny": []
   }
