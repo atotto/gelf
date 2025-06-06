@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"gelf/internal/ai"
 	"gelf/internal/git"
@@ -31,8 +30,6 @@ type model struct {
 	err           error
 	state         state
 	spinner       spinner.Model
-	progress      float64
-	startTime     time.Time
 }
 
 type msgCommitGenerated struct {
@@ -44,9 +41,6 @@ type msgCommitDone struct {
 	err error
 }
 
-type msgProgressUpdate struct {
-	progress float64
-}
 
 
 
@@ -91,8 +85,6 @@ var (
 		Foreground(lipgloss.Color("6")).
 		Bold(true)
 
-	progressBarStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("4"))
 
 	loadingFrameStyle = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -113,16 +105,15 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 	
 	return &model{
-		aiClient:  aiClient,
-		diff:      diff,
-		state:     stateLoading,
-		spinner:   s,
-		startTime: time.Now(),
+		aiClient: aiClient,
+		diff:     diff,
+		state:    stateLoading,
+		spinner:  s,
 	}
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.generateCommitMessage(), m.updateProgress())
+	return tea.Batch(m.spinner.Tick, m.generateCommitMessage())
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -140,9 +131,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y", "Y":
 				m.state = stateCommitting
-				m.progress = 0.0
-				m.startTime = time.Now()
-				return m, tea.Batch(m.spinner.Tick, m.commitChanges(), m.updateProgress())
+				return m, tea.Batch(m.spinner.Tick, m.commitChanges())
 			case "n", "N", "q", "ctrl+c":
 				return m, tea.Quit
 			}
@@ -150,11 +139,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case msgProgressUpdate:
-		m.progress = msg.progress
-		if m.state == stateLoading || m.state == stateCommitting {
-			return m, m.updateProgress()
-		}
 
 	case msgCommitGenerated:
 		if msg.err != nil {
@@ -163,7 +147,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.commitMessage = msg.message
 			m.state = stateConfirm
-			m.progress = 1.0 // Complete progress when AI response received
 		}
 
 	case msgCommitDone:
@@ -172,7 +155,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = stateError
 		} else {
 			m.state = stateSuccess
-			m.progress = 1.0 // Complete progress when commit done
 		}
 		return m, tea.Quit
 	}
@@ -189,11 +171,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
-		progressBar := m.renderProgressBar(m.progress)
-		content := fmt.Sprintf("%s %s\n\n%s",
+		content := fmt.Sprintf("%s %s",
 			m.spinner.View(),
-			generatingStyle.Render("Generating commit message..."),
-			progressBar)
+			generatingStyle.Render("Generating commit message..."))
 		return loadingFrameStyle.Render(content)
 
 	case stateConfirm:
@@ -205,11 +185,9 @@ func (m *model) View() string {
 		return confirmFrameStyle.Render(content)
 
 	case stateCommitting:
-		progressBar := m.renderProgressBar(m.progress)
-		content := fmt.Sprintf("%s %s\n\n%s",
+		content := fmt.Sprintf("%s %s",
 			m.spinner.View(),
-			generatingStyle.Render("Committing changes..."),
-			progressBar)
+			generatingStyle.Render("Committing changes..."))
 		return loadingFrameStyle.Render(content)
 
 	case stateSuccess:
@@ -222,17 +200,6 @@ func (m *model) View() string {
 	return ""
 }
 
-func (m *model) renderProgressBar(progress float64) string {
-	width := 30
-	filled := int(progress * float64(width))
-	
-	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
-	percentage := fmt.Sprintf("%.0f%%", progress*100)
-	
-	return fmt.Sprintf("%s %s",
-		progressBarStyle.Render(bar),
-		progressBarStyle.Render(percentage))
-}
 
 func (m *model) generateCommitMessage() tea.Cmd {
 	return tea.Cmd(func() tea.Msg {
@@ -252,30 +219,6 @@ func (m *model) commitChanges() tea.Cmd {
 	})
 }
 
-func (m *model) updateProgress() tea.Cmd {
-	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
-		if m.state == stateLoading {
-			// Progress based on elapsed time (estimate: AI response takes ~5-10 seconds)
-			elapsed := time.Since(m.startTime).Seconds()
-			estimatedDuration := 8.0 // 8 seconds estimate
-			newProgress := elapsed / estimatedDuration
-			if newProgress > 0.95 {
-				newProgress = 0.95 // Cap at 95% until actual completion
-			}
-			return msgProgressUpdate{progress: newProgress}
-		} else if m.state == stateCommitting {
-			// Progress based on elapsed time (estimate: commit takes ~1-2 seconds)
-			elapsed := time.Since(m.startTime).Seconds()
-			estimatedDuration := 1.5 // 1.5 seconds estimate
-			newProgress := elapsed / estimatedDuration
-			if newProgress > 0.95 {
-				newProgress = 0.95 // Cap at 95% until actual completion
-			}
-			return msgProgressUpdate{progress: newProgress}
-		}
-		return nil
-	})
-}
 
 
 
