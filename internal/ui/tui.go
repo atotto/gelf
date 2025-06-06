@@ -61,21 +61,6 @@ var (
 				Dark:  "#764ba2",
 			})
 
-	// メインタイトルスタイル
-	titleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(lipgloss.Color("#667eea")).
-			Padding(1, 3).
-			Margin(1, 0).
-			Bold(true).
-			Align(lipgloss.Center)
-
-	// サブタイトルスタイル
-	subtitleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#8B949E")).
-			Italic(true).
-			Align(lipgloss.Center).
-			MarginBottom(2)
 
 	// 確認ダイアログスタイル
 	confirmStyle = lipgloss.NewStyle().
@@ -149,11 +134,6 @@ var (
 			Align(lipgloss.Center).
 			MarginTop(1)
 
-	// ボーダー装飾スタイル
-	decoratorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#667eea")).
-			Align(lipgloss.Center).
-			Margin(0, 0, 1, 0)
 )
 
 func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
@@ -248,17 +228,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) View() string {
-	// メインタイトルとサブタイトル
-	title := titleStyle.Render("🚀 geminielf")
-	subtitle := subtitleStyle.Render("AI-Powered Git Commit Message Generator")
-	decorator := decoratorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	
-	header := lipgloss.JoinVertical(lipgloss.Center,
-		title,
-		subtitle,
-		decorator,
-	)
-	
 	switch m.state {
 	case stateLoading:
 		loadingText := loadingStyle.Render(fmt.Sprintf("%s Generating commit message...", m.spinner.View()))
@@ -278,6 +247,7 @@ func (m *model) View() string {
 			})
 		
 		progressContent := lipgloss.JoinVertical(lipgloss.Center,
+			"🚀 geminielf",
 			loadingText,
 			"",
 			"🧠 AI is analyzing your changes...",
@@ -287,7 +257,7 @@ func (m *model) View() string {
 		)
 		
 		progressBox := progressContainer.Render(progressContent)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", progressBox)
+		return lipgloss.JoinVertical(lipgloss.Center, progressBox)
 
 	case stateConfirm:
 		messageBox := commitMessageStyle.Render(m.commitMessage)
@@ -298,6 +268,8 @@ func (m *model) View() string {
 		helpText := helpStyle.Render("Press 'y' to commit or 'n' to cancel")
 		
 		content := lipgloss.JoinVertical(lipgloss.Center,
+			"🚀 geminielf",
+			"",
 			"📝 Generated Commit Message:",
 			messageBox,
 			"",
@@ -307,7 +279,7 @@ func (m *model) View() string {
 		)
 		
 		confirmBox := confirmStyle.Render(content)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", confirmBox)
+		return lipgloss.JoinVertical(lipgloss.Center, confirmBox)
 
 	case stateCommitting:
 		committingText := loadingStyle.Render(fmt.Sprintf("%s Committing changes...", m.spinner.View()))
@@ -327,6 +299,7 @@ func (m *model) View() string {
 			})
 		
 		commitContent := lipgloss.JoinVertical(lipgloss.Center,
+			"🚀 geminielf",
 			committingText,
 			"",
 			"💾 Applying changes to repository...",
@@ -336,7 +309,7 @@ func (m *model) View() string {
 		)
 		
 		commitBox := commitContainer.Render(commitContent)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", commitBox)
+		return lipgloss.JoinVertical(lipgloss.Center, commitBox)
 
 	case stateSuccess:
 		// 成功アイコンとタイトル
@@ -364,6 +337,8 @@ func (m *model) View() string {
 		commitedMessageBox := commitMessageStyle.Render(m.commitMessage)
 		
 		successContent := lipgloss.JoinVertical(lipgloss.Center,
+			"🚀 geminielf",
+			"",
 			successTitle,
 			"",
 			"✨ Your changes have been committed successfully!",
@@ -375,7 +350,7 @@ func (m *model) View() string {
 		)
 		
 		successBox := successContainer.Render(successContent)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", successBox)
+		return lipgloss.JoinVertical(lipgloss.Center, successBox)
 
 	case stateError:
 		// エラーアイコンとタイトル
@@ -400,6 +375,8 @@ func (m *model) View() string {
 			})
 		
 		errorContent := lipgloss.JoinVertical(lipgloss.Center,
+			"🚀 geminielf",
+			"",
 			errorTitle,
 			"",
 			fmt.Sprintf("🔍 Details: %v", m.err),
@@ -409,7 +386,7 @@ func (m *model) View() string {
 		)
 		
 		errorBox := errorContainer.Render(errorContent)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", errorBox)
+		return lipgloss.JoinVertical(lipgloss.Center, errorBox)
 	}
 
 	return ""
