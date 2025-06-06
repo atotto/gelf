@@ -353,17 +353,24 @@ func (m *model) View() string {
 			BorderForeground(lipgloss.Color("#28a745")).
 			Padding(3, 4).
 			Margin(1, 2).
-			Width(70).
+			Width(80).
 			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
 				Dark:  "#0d1117",
 			})
 		
+		// コミットしたメッセージを表示
+		commitedMessageBox := commitMessageStyle.Render(m.commitMessage)
+		
 		successContent := lipgloss.JoinVertical(lipgloss.Center,
 			successTitle,
 			"",
 			"✨ Your changes have been committed successfully!",
+			"",
+			"📝 Committed with message:",
+			commitedMessageBox,
+			"",
 			"🚀 The AI-generated message has been applied.",
 		)
 		
