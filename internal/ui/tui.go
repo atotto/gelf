@@ -9,6 +9,7 @@ import (
 	"geminielf/internal/ai"
 	"geminielf/internal/git"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -31,6 +32,9 @@ type model struct {
 	err           error
 	state         state
 	spinner       spinner.Model
+	progress      progress.Model
+	width         int
+	height        int
 }
 
 type msgCommitGenerated struct {
@@ -46,34 +50,126 @@ type msgAutoQuit struct{}
 
 
 var (
-	titleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(lipgloss.Color("#7D56F4")).
-			Padding(0, 1)
+	// グラデーションカラーパレット
+	primaryGradient = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(lipgloss.AdaptiveColor{
+				Light: "#667eea",
+				Dark:  "#764ba2",
+			})
 
+	// メインタイトルスタイル
+	titleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(lipgloss.Color("#667eea")).
+			Padding(1, 3).
+			Margin(1, 0).
+			Bold(true).
+			Align(lipgloss.Center)
+
+	// サブタイトルスタイル
+	subtitleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#8B949E")).
+			Italic(true).
+			Align(lipgloss.Center).
+			MarginBottom(2)
+
+	// 確認ダイアログスタイル
 	confirmStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#874BFD")).
+			BorderForeground(lipgloss.Color("#667eea")).
+			Padding(2, 3).
+			Margin(1, 2).
+			Background(lipgloss.AdaptiveColor{
+				Light: "#f8f9fa",
+				Dark:  "#0d1117",
+			})
+
+	// コミットメッセージスタイル
+	commitMessageStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#E6EDF3")).
+			Background(lipgloss.Color("#21262D")).
 			Padding(1, 2).
+			Margin(1, 0).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#30363D")).
+			Italic(true)
+
+	// アクションボタンスタイル
+	buttonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(lipgloss.Color("#28a745")).
+			Padding(0, 2).
+			Margin(0, 1).
+			Bold(true).
+			Border(lipgloss.RoundedBorder())
+
+	cancelButtonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(lipgloss.Color("#dc3545")).
+			Padding(0, 2).
+			Margin(0, 1).
+			Bold(true).
+			Border(lipgloss.RoundedBorder())
+
+	// 成功メッセージスタイル
+	successStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(lipgloss.Color("#28a745")).
+			Padding(2, 3).
+			Margin(1, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#28a745")).
+			Bold(true)
+
+	// エラーメッセージスタイル
+	errorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(lipgloss.Color("#dc3545")).
+			Padding(2, 3).
+			Margin(1, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#dc3545")).
+			Bold(true)
+
+	// ローディングスタイル
+	loadingStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#667eea")).
+			Bold(true).
+			Margin(1, 0)
+
+	// ヘルプテキストスタイル
+	helpStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#8B949E")).
+			Align(lipgloss.Center).
 			MarginTop(1)
 
-	errorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF0000"))
-
-	successStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#00FF00"))
+	// ボーダー装飾スタイル
+	decoratorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#667eea")).
+			Align(lipgloss.Center).
+			Margin(0, 0, 1, 0)
 )
 
 func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Spinner = spinner.MiniDot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#667eea"))
+	
+	// プログレスバーの設定
+	prog := progress.New(progress.WithDefaultGradient())
+	prog.Full = '█'
+	prog.Empty = '░'
+	prog.Width = 40
 	
 	return &model{
 		aiClient: aiClient,
 		diff:     diff,
 		state:    stateLoading,
 		spinner:  s,
+		progress: prog,
+		width:    80,
+		height:   24,
 	}
 }
 
@@ -85,6 +181,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.progress.Width = min(40, m.width-10)
+		
 	case tea.KeyMsg:
 		switch m.state {
 		case stateConfirm:
@@ -132,26 +233,97 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) View() string {
-	title := titleStyle.Render("🤖 geminielf")
+	// メインタイトルとサブタイトル
+	title := titleStyle.Render("🚀 geminielf")
+	subtitle := subtitleStyle.Render("AI-Powered Git Commit Message Generator")
+	decorator := decoratorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	
+	header := lipgloss.JoinVertical(lipgloss.Center,
+		title,
+		subtitle,
+		decorator,
+	)
 	
 	switch m.state {
 	case stateLoading:
-		return fmt.Sprintf("%s\n\n%s Generating commit message...", title, m.spinner.View())
+		loadingText := loadingStyle.Render(fmt.Sprintf("%s Generating commit message...", m.spinner.View()))
+		progressBar := m.progress.ViewAs(0.7) // シミュレートされたプログレス
+		progressStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#667eea")).
+			Align(lipgloss.Center).
+			Margin(1, 0)
+		styledProgress := progressStyle.Render(progressBar)
+		
+		loadingContent := lipgloss.JoinVertical(lipgloss.Center,
+			loadingText,
+			"",
+			"🧠 AI is analyzing your changes...",
+			styledProgress,
+		)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", loadingContent)
 
 	case stateConfirm:
-		content := fmt.Sprintf("Generated commit message:\n\n%s\n\nCommit with this message? (y/n)", m.commitMessage)
-		return title + "\n" + confirmStyle.Render(content)
+		messageBox := commitMessageStyle.Render(m.commitMessage)
+		buttons := lipgloss.JoinHorizontal(lipgloss.Center,
+			buttonStyle.Render("✓ Yes (y)"),
+			cancelButtonStyle.Render("✗ No (n)"),
+		)
+		helpText := helpStyle.Render("Press 'y' to commit or 'n' to cancel")
+		
+		content := lipgloss.JoinVertical(lipgloss.Center,
+			"📝 Generated Commit Message:",
+			messageBox,
+			"",
+			"🤔 Commit with this message?",
+			buttons,
+			helpText,
+		)
+		
+		confirmBox := confirmStyle.Render(content)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", confirmBox)
 
 	case stateCommitting:
-		return fmt.Sprintf("%s\n\n%s Committing changes...", title, m.spinner.View())
+		committingText := loadingStyle.Render(fmt.Sprintf("%s Committing changes...", m.spinner.View()))
+		progressBar := m.progress.ViewAs(0.9) // コミット中の高いプログレス
+		progressStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#28a745")).
+			Align(lipgloss.Center).
+			Margin(1, 0)
+		styledProgress := progressStyle.Render(progressBar)
+		
+		committingContent := lipgloss.JoinVertical(lipgloss.Center,
+			committingText,
+			"",
+			"💾 Applying changes to repository...",
+			styledProgress,
+		)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", committingContent)
 
 	case stateSuccess:
-		successMsg := "🎉 Changes committed successfully!\n\n✨ Your commit has been created with the generated message."
-		return title + "\n\n" + successStyle.Render(successMsg)
+		successContent := lipgloss.JoinVertical(lipgloss.Center,
+			"🎉 Success!",
+			"",
+			"✨ Your changes have been committed successfully!",
+			"🚀 The AI-generated message has been applied.",
+			"",
+			"⏱️  Closing in 2 seconds...",
+		)
+		successBox := successStyle.Render(successContent)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", successBox)
 
 	case stateError:
-		errorMsg := fmt.Sprintf("❌ Error: %v\n\n💡 Please check your configuration and try again.", m.err)
-		return title + "\n\n" + errorStyle.Render(errorMsg)
+		errorContent := lipgloss.JoinVertical(lipgloss.Center,
+			"❌ Error Occurred",
+			"",
+			fmt.Sprintf("🔍 Details: %v", m.err),
+			"",
+			"💡 Please check your configuration and try again.",
+			"🔧 Make sure Git is properly configured.",
+			"",
+			"⏱️  Closing in 2 seconds...",
+		)
+		errorBox := errorStyle.Render(errorContent)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", errorBox)
 	}
 
 	return ""
@@ -186,4 +358,12 @@ func (m *model) Run() error {
 	p := tea.NewProgram(m)
 	_, err := p.Run()
 	return err
+}
+
+// ヘルパー関数
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
