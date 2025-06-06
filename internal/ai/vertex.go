@@ -31,25 +31,32 @@ func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient
 }
 
 func (v *VertexAIClient) GenerateCommitMessage(ctx context.Context, diff string) (string, error) {
-	prompt := fmt.Sprintf(`Based on the following git diff, generate a concise and descriptive commit message following the Conventional Commits specification.
+	prompt := fmt.Sprintf(`Analyze the following git diff and generate a precise commit message following the Conventional Commits specification.
 
-REQUIREMENTS:
+DIFF ANALYSIS GUIDE:
+1. Look at file paths to understand what parts of the codebase are affected
+2. Examine +/- lines to understand what was added, removed, or modified
+3. Pay attention to function names, variable names, and code structure changes
+4. Consider the context lines (prefixed with space) to understand the surrounding code
+5. Identify the primary purpose: new feature, bug fix, refactoring, etc.
+
+COMMIT MESSAGE REQUIREMENTS:
 1. Use English only
-2. Follow Conventional Commits format: <type>[optional scope]: <description>
+2. Follow format: <type>[optional scope]: <description>
 3. Valid types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
-4. Keep the entire message under 72 characters
-5. Use imperative mood (e.g., "add" not "added" or "adds")
+4. Keep under 72 characters total
+5. Use imperative mood ("add" not "added")
 6. Start description with lowercase letter
 7. No period at the end
-8. Focus on the most significant change if there are multiple changes
+8. If multiple changes, focus on the most significant one
+9. Use scope when it helps clarify the area of change (e.g., auth, api, ui)
 
 EXAMPLES:
-- feat: add user authentication system
-- fix: resolve memory leak in data processing
-- docs: update installation instructions
-- refactor: simplify error handling logic
-- test: add unit tests for payment module
-- chore: update dependencies to latest versions
+- feat(auth): add JWT token validation
+- fix(api): resolve null pointer in user service
+- refactor(db): simplify connection pooling logic
+- test(payment): add unit tests for stripe integration
+- chore(deps): update react to version 18.2.0
 
 Git diff:
 %s
