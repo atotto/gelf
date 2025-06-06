@@ -22,8 +22,8 @@ func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient
 
 	model := client.GenerativeModel(cfg.Model)
 	model.SetTemperature(0.3)
-	model.SetMaxOutputTokens(1000)
-	
+	model.SetMaxOutputTokens(2000)
+
 	// Set safety settings to allow more content
 	model.SafetySettings = []*genai.SafetySetting{
 		{
@@ -84,7 +84,7 @@ Respond with only the commit message, no additional text or formatting.`, diff)
 	if len(resp.Candidates) == 0 {
 		return "", fmt.Errorf("no candidates in response")
 	}
-	
+
 	if len(resp.Candidates[0].Content.Parts) == 0 {
 		return "", fmt.Errorf("no content parts in response")
 	}
