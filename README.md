@@ -29,7 +29,7 @@ go build
 ### Install Binary
 
 ```bash
-go install
+go install github.com/EkeMinusYou/gelf@latest
 ```
 
 ## ⚙️ Setup
