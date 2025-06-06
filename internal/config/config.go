@@ -11,12 +11,12 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	projectID := os.Getenv("VERTEX_AI_PROJECT_ID")
+	projectID := os.Getenv("VERTEXAI_PROJECT")
 	if projectID == "" {
 		projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
 	}
 
-	location := os.Getenv("VERTEX_AI_LOCATION")
+	location := os.Getenv("VERTEXAI_LOCATION")
 	if location == "" {
 		location = "us-central1"
 	}

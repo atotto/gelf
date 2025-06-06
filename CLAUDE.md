@@ -104,6 +104,6 @@ devcontainerの設定：
 
 アプリケーションの環境変数：
 - `GOOGLE_APPLICATION_CREDENTIALS` - サービスアカウントキーへのパス
-- `VERTEX_AI_PROJECT_ID` - Google CloudプロジェクトID
-- `VERTEX_AI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)
+- `VERTEXAI_PROJECT` - Google CloudプロジェクトID
+- `VERTEXAI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)
 - `GEMINIELF_DEFAULT_MODEL` - 使用するGeminiモデル (デフォルト: gemini-2.5-flash-preview-05-20)
