@@ -6,7 +6,7 @@ import (
 )
 
 func GetStagedDiff() (string, error) {
-	cmd := exec.Command("git", "diff", "--staged")
+	cmd := exec.Command("git", "--no-pager", "diff", "--staged")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
