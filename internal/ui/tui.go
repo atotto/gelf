@@ -35,6 +35,7 @@ type model struct {
 	progress      progress.Model
 	width         int
 	height        int
+	progressValue float64
 }
 
 type msgCommitGenerated struct {
@@ -47,6 +48,10 @@ type msgCommitDone struct {
 }
 
 type msgAutoQuit struct{}
+
+type msgProgressUpdate struct {
+	value float64
+}
 
 
 var (
@@ -78,8 +83,10 @@ var (
 	confirmStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#667eea")).
-			Padding(2, 3).
+			Padding(3, 4).
 			Margin(1, 2).
+			Width(70).
+			Align(lipgloss.Center).
 			Background(lipgloss.AdaptiveColor{
 				Light: "#f8f9fa",
 				Dark:  "#0d1117",
@@ -160,21 +167,22 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	prog := progress.New(progress.WithDefaultGradient())
 	prog.Full = '█'
 	prog.Empty = '░'
-	prog.Width = 40
+	prog.Width = 60
 	
 	return &model{
-		aiClient: aiClient,
-		diff:     diff,
-		state:    stateLoading,
-		spinner:  s,
-		progress: prog,
-		width:    80,
-		height:   24,
+		aiClient:      aiClient,
+		diff:          diff,
+		state:         stateLoading,
+		spinner:       s,
+		progress:      prog,
+		width:         80,
+		height:        24,
+		progressValue: 0.0,
 	}
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.generateCommitMessage())
+	return tea.Batch(m.spinner.Tick, m.generateCommitMessage(), m.simulateProgress())
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -192,7 +200,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y", "Y":
 				m.state = stateCommitting
-				return m, tea.Batch(m.spinner.Tick, m.commitChanges())
+				m.progressValue = 0.0 // コミット開始時はリセット
+				return m, tea.Batch(m.spinner.Tick, m.commitChanges(), m.simulateCommitProgress())
 			case "n", "N", "q", "ctrl+c":
 				return m, tea.Quit
 			}
@@ -200,7 +209,17 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+	case msgProgressUpdate:
+		m.progressValue = msg.value
+		// 処理中なら継続的にプログレス更新
+		if m.state == stateLoading {
+			return m, m.simulateProgress()
+		} else if m.state == stateCommitting {
+			return m, m.simulateCommitProgress()
+		}
+		
 	case msgCommitGenerated:
+		m.progressValue = 1.0 // 完了時は100%
 		if msg.err != nil {
 			m.err = msg.err
 			m.state = stateError
@@ -247,20 +266,32 @@ func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
 		loadingText := loadingStyle.Render(fmt.Sprintf("%s Generating commit message...", m.spinner.View()))
-		progressBar := m.progress.ViewAs(0.7) // シミュレートされたプログレス
-		progressStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#667eea")).
-			Align(lipgloss.Center).
-			Margin(1, 0)
-		styledProgress := progressStyle.Render(progressBar)
+		progressBar := m.progress.ViewAs(m.progressValue)
 		
-		loadingContent := lipgloss.JoinVertical(lipgloss.Center,
+		// プログレスバーコンテナ
+		progressContainer := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#667eea")).
+			Padding(2, 3).
+			Margin(1, 2).
+			Width(70).
+			Align(lipgloss.Center).
+			Background(lipgloss.AdaptiveColor{
+				Light: "#f8f9fa",
+				Dark:  "#0d1117",
+			})
+		
+		progressContent := lipgloss.JoinVertical(lipgloss.Center,
 			loadingText,
 			"",
 			"🧠 AI is analyzing your changes...",
-			styledProgress,
+			"",
+			progressBar,
+			fmt.Sprintf("%.0f%%", m.progressValue*100),
 		)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", loadingContent)
+		
+		progressBox := progressContainer.Render(progressContent)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", progressBox)
 
 	case stateConfirm:
 		messageBox := commitMessageStyle.Render(m.commitMessage)
@@ -284,45 +315,101 @@ func (m *model) View() string {
 
 	case stateCommitting:
 		committingText := loadingStyle.Render(fmt.Sprintf("%s Committing changes...", m.spinner.View()))
-		progressBar := m.progress.ViewAs(0.9) // コミット中の高いプログレス
-		progressStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#28a745")).
-			Align(lipgloss.Center).
-			Margin(1, 0)
-		styledProgress := progressStyle.Render(progressBar)
+		progressBar := m.progress.ViewAs(m.progressValue)
 		
-		committingContent := lipgloss.JoinVertical(lipgloss.Center,
+		// コミット用プログレスバーコンテナ
+		commitContainer := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#28a745")).
+			Padding(2, 3).
+			Margin(1, 2).
+			Width(70).
+			Align(lipgloss.Center).
+			Background(lipgloss.AdaptiveColor{
+				Light: "#f8f9fa",
+				Dark:  "#0d1117",
+			})
+		
+		commitContent := lipgloss.JoinVertical(lipgloss.Center,
 			committingText,
 			"",
 			"💾 Applying changes to repository...",
-			styledProgress,
+			"",
+			progressBar,
+			fmt.Sprintf("%.0f%%", m.progressValue*100),
 		)
-		return lipgloss.JoinVertical(lipgloss.Center, header, "", committingContent)
+		
+		commitBox := commitContainer.Render(commitContent)
+		return lipgloss.JoinVertical(lipgloss.Center, header, "", commitBox)
 
 	case stateSuccess:
+		// 成功アイコンとタイトル
+		successTitle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#28a745")).
+			Bold(true).
+			Align(lipgloss.Center).
+			MarginBottom(1).
+			Render("🎉 Success!")
+		
+		// 成功メッセージコンテナ
+		successContainer := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#28a745")).
+			Padding(3, 4).
+			Margin(1, 2).
+			Width(70).
+			Align(lipgloss.Center).
+			Background(lipgloss.AdaptiveColor{
+				Light: "#f8f9fa",
+				Dark:  "#0d1117",
+			})
+		
 		successContent := lipgloss.JoinVertical(lipgloss.Center,
-			"🎉 Success!",
+			successTitle,
 			"",
 			"✨ Your changes have been committed successfully!",
 			"🚀 The AI-generated message has been applied.",
 			"",
-			"⏱️  Closing in 2 seconds...",
+			helpStyle.Render("⏱️  Closing in 2 seconds..."),
 		)
-		successBox := successStyle.Render(successContent)
+		
+		successBox := successContainer.Render(successContent)
 		return lipgloss.JoinVertical(lipgloss.Center, header, "", successBox)
 
 	case stateError:
+		// エラーアイコンとタイトル
+		errorTitle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#dc3545")).
+			Bold(true).
+			Align(lipgloss.Center).
+			MarginBottom(1).
+			Render("❌ Error Occurred")
+		
+		// エラーメッセージコンテナ
+		errorContainer := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#dc3545")).
+			Padding(3, 4).
+			Margin(1, 2).
+			Width(70).
+			Align(lipgloss.Center).
+			Background(lipgloss.AdaptiveColor{
+				Light: "#f8f9fa",
+				Dark:  "#0d1117",
+			})
+		
 		errorContent := lipgloss.JoinVertical(lipgloss.Center,
-			"❌ Error Occurred",
+			errorTitle,
 			"",
 			fmt.Sprintf("🔍 Details: %v", m.err),
 			"",
 			"💡 Please check your configuration and try again.",
 			"🔧 Make sure Git is properly configured.",
 			"",
-			"⏱️  Closing in 2 seconds...",
+			helpStyle.Render("⏱️  Closing in 2 seconds..."),
 		)
-		errorBox := errorStyle.Render(errorContent)
+		
+		errorBox := errorContainer.Render(errorContent)
 		return lipgloss.JoinVertical(lipgloss.Center, header, "", errorBox)
 	}
 
@@ -350,6 +437,36 @@ func (m *model) commitChanges() tea.Cmd {
 func (m *model) autoQuitAfterDelay() tea.Cmd {
 	return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
 		return msgAutoQuit{}
+	})
+}
+
+// AI処理中のプログレス更新をシミュレート
+func (m *model) simulateProgress() tea.Cmd {
+	return tea.Tick(time.Millisecond*100, func(t time.Time) tea.Msg {
+		if m.state == stateLoading {
+			// プログレスを徐々に増加（最大90%まで）
+			newValue := m.progressValue + 0.02
+			if newValue > 0.9 {
+				newValue = 0.9
+			}
+			return msgProgressUpdate{value: newValue}
+		}
+		return nil
+	})
+}
+
+// コミット処理中のプログレス更新をシミュレート  
+func (m *model) simulateCommitProgress() tea.Cmd {
+	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {
+		if m.state == stateCommitting {
+			// コミット処理は高速なのでより速くプログレス
+			newValue := m.progressValue + 0.1
+			if newValue > 1.0 {
+				newValue = 1.0
+			}
+			return msgProgressUpdate{value: newValue}
+		}
+		return nil
 	})
 }
 
