@@ -34,9 +34,31 @@ go install github.com/EkeMinusYou/gelf@latest
 
 ## ⚙️ Setup
 
-### 1. Google Cloud Authentication
+### 1. Configuration Options
 
-To use the Vertex AI API, configure the following environment variables:
+gelf supports both configuration files and environment variables. Configuration files provide a more organized approach for managing settings.
+
+#### Configuration File (Recommended)
+
+Create a `gelf.yml` file in one of the following locations (in order of priority):
+
+1. `./gelf.yml` - Project-specific configuration
+2. `$XDG_CONFIG_HOME/gelf/gelf.yml` - XDG config directory
+3. `~/.config/gelf/gelf.yml` - Default XDG config location
+4. `~/.gelf.yml` - Legacy home directory location
+
+```yaml
+vertex_ai:
+  project_id: "your-gcp-project-id"
+  location: "us-central1"  # optional, default: us-central1
+
+gelf:
+  default_model: "gemini-2.5-flash-preview-05-20"  # optional
+```
+
+#### Environment Variables (Alternative)
+
+You can also configure using environment variables:
 
 ```bash
 # Path to your service account key file
@@ -47,12 +69,11 @@ export VERTEXAI_PROJECT="your-project-id"
 
 # Vertex AI location (optional, default: us-central1)
 export VERTEXAI_LOCATION="us-central1"
-
-# Gemini model to use (optional)
-export GELF_DEFAULT_MODEL="gemini-2.5-flash-preview-05-20"
 ```
 
-### 2. Service Account Setup
+**Note**: The default model can only be configured via configuration file, not environment variables.
+
+### 2. Google Cloud Authentication
 
 1. Create a service account in Google Cloud Console
 2. Grant the "Vertex AI User" role
@@ -187,14 +208,36 @@ The interface features:
 - **Color-coded states**: Cyan for loading, Blue for confirmation, Green for success, Red for errors
 - **Icon prefixes**: 📝 for messages, ✓ for success, ✗ for errors
 
-## 🌍 Environment Variables
+## ⚙️ Configuration Reference
+
+### Configuration Priority
+
+Settings are applied in the following order (highest to lowest priority):
+
+1. **Environment variables** (for Vertex AI settings only)
+2. **Configuration file** (`gelf.yml`)
+3. **Default values**
+
+### Configuration File Options
+
+```yaml
+vertex_ai:
+  project_id: string     # Google Cloud project ID
+  location: string       # Vertex AI location (default: us-central1)
+
+gelf:
+  default_model: string  # Gemini model to use (default: gemini-2.5-flash-preview-05-20)
+```
+
+### Environment Variables
 
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key file | - | ✅ |
 | `VERTEXAI_PROJECT` | Google Cloud project ID | - | ✅ |
 | `VERTEXAI_LOCATION` | Vertex AI location | `us-central1` | ❌ |
-| `GELF_DEFAULT_MODEL` | Gemini model to use | `gemini-2.5-flash-preview-05-20` | ❌ |
+
+**Note**: Model configuration is only available through configuration files.
 
 ## 🔨 Development
 
@@ -232,6 +275,7 @@ go run main.go git message   # Run message generation only
 - [`github.com/charmbracelet/lipgloss`](https://github.com/charmbracelet/lipgloss) - Styling and layout
 - [`github.com/charmbracelet/bubbles`](https://github.com/charmbracelet/bubbles) - TUI components (spinner)
 - [`github.com/spf13/cobra`](https://github.com/spf13/cobra) - CLI framework
+- [`gopkg.in/yaml.v3`](https://gopkg.in/yaml.v3) - YAML configuration file support
 
 ## 🤝 Contributing
 
