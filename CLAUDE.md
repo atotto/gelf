@@ -97,6 +97,29 @@ go run main.go git message   # アプリケーション実行 (git messageサブ
 - Vertex AI API認証情報
 - モデル選択 (デフォルト: gemini-2.5-flash-preview-05-20)
 
+### 設定ファイル
+
+以下の場所で`gelf.yml`設定を管理できます（優先順）：
+
+1. `./gelf.yml` - カレントディレクトリ（プロジェクト固有設定）
+2. `$XDG_CONFIG_HOME/gelf/gelf.yml` - XDG設定ディレクトリ
+3. `~/.config/gelf/gelf.yml` - XDG_CONFIG_HOMEが未設定の場合
+4. `~/.gelf.yml` - ホームディレクトリ（従来形式）
+
+```yaml
+vertex_ai:
+  project_id: "your-gcp-project-id"
+  location: "us-central1"
+
+gelf:
+  default_model: "gemini-2.5-flash-preview-05-20"
+```
+
+設定の優先順位（高い順）：
+1. 環境変数
+2. 設定ファイル
+3. デフォルト値
+
 ## 環境変数
 
 devcontainerの設定：
@@ -107,4 +130,5 @@ devcontainerの設定：
 - `GOOGLE_APPLICATION_CREDENTIALS` - サービスアカウントキーへのパス
 - `VERTEXAI_PROJECT` - Google CloudプロジェクトID
 - `VERTEXAI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)
-- `GELF_DEFAULT_MODEL` - 使用するGeminiモデル (デフォルト: gemini-2.5-flash-preview-05-20)
+
+モデル設定は設定ファイル（gelf.yml）でのみ変更可能です。

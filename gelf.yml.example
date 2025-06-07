@@ -1,0 +1,24 @@
+# gelf configuration file
+# Copy this file to one of the following locations (in order of priority):
+# 1. ./gelf.yml (current directory - project-specific)
+# 2. $XDG_CONFIG_HOME/gelf/gelf.yml (XDG config directory)
+# 3. ~/.config/gelf/gelf.yml (fallback XDG config)
+# 4. ~/.gelf.yml (home directory - legacy format)
+
+vertex_ai:
+  # Google Cloud Project ID for Vertex AI
+  project_id: "your-gcp-project-id"
+  
+  # Vertex AI region/location (default: us-central1)
+  location: "us-central1"
+
+gelf:
+  # Default Gemini model to use (default: gemini-2.5-flash-preview-05-20)
+  default_model: "gemini-2.5-flash-preview-05-20"
+
+# Configuration priority (highest to lowest):
+# 1. Environment variables (VERTEXAI_PROJECT, VERTEXAI_LOCATION)
+# 2. This configuration file
+# 3. Built-in defaults
+#
+# Note: default_model can only be configured via this file, not environment variables
