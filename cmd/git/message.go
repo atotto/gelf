@@ -38,7 +38,7 @@ func runMessage(cmd *cobra.Command, args []string) error {
 	}
 
 	if model != "" {
-		cfg.Model = model
+		cfg.FlashModel = model
 	}
 
 	diff, err := git.GetStagedDiff()

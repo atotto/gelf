@@ -10,8 +10,9 @@ import (
 )
 
 type VertexAIClient struct {
-	client *genai.Client
-	model  string
+	client     *genai.Client
+	flashModel string
+	proModel   string
 }
 
 func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient, error) {
@@ -25,8 +26,9 @@ func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient
 	}
 
 	return &VertexAIClient{
-		client: client,
-		model:  cfg.Model,
+		client:     client,
+		flashModel: cfg.FlashModel,
+		proModel:   cfg.ProModel,
 	}, nil
 }
 
@@ -63,7 +65,7 @@ Git diff:
 
 Respond with only the commit message, no additional text or formatting.`, diff)
 
-	resp, err := v.client.Models.GenerateContent(ctx, v.model, 
+	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel, 
 		[]*genai.Content{
 			genai.NewUserContentFromText(prompt),
 		},

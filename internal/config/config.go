@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	ProjectID string `yaml:"project_id"`
-	Location  string `yaml:"location"`
-	Model     string `yaml:"model"`
+	ProjectID  string `yaml:"project_id"`
+	Location   string `yaml:"location"`
+	FlashModel string `yaml:"flash_model"`
+	ProModel   string `yaml:"pro_model"`
 }
 
 type FileConfig struct {
@@ -19,7 +20,8 @@ type FileConfig struct {
 		Location  string `yaml:"location"`
 	} `yaml:"vertex_ai"`
 	Gelf struct {
-		DefaultModel string `yaml:"default_model"`
+		FlashModel string `yaml:"flash_model"`
+		ProModel   string `yaml:"pro_model"`
 	} `yaml:"gelf"`
 }
 
@@ -48,15 +50,21 @@ func Load() (*Config, error) {
 		location = "us-central1"
 	}
 
-	model := fileConfig.Gelf.DefaultModel
-	if model == "" {
-		model = "gemini-2.5-flash-preview-05-20"
+	flashModel := fileConfig.Gelf.FlashModel
+	if flashModel == "" {
+		flashModel = "gemini-2.5-flash-preview-05-20"
+	}
+
+	proModel := fileConfig.Gelf.ProModel
+	if proModel == "" {
+		proModel = "gemini-2.5-pro-preview-05-06"
 	}
 
 	return &Config{
-		ProjectID: projectID,
-		Location:  location,
-		Model:     model,
+		ProjectID:  projectID,
+		Location:   location,
+		FlashModel: flashModel,
+		ProModel:   proModel,
 	}, nil
 }
 
