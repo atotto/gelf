@@ -21,8 +21,8 @@ gelf is a Go-based CLI tool that automatically generates Git commit messages usi
 ### Build from Source
 
 ```bash
-git clone https://github.com/EkeMinusYou/geminielf.git
-cd geminielf
+git clone https://github.com/EkeMinusYou/gelf.git
+cd gelf
 go build
 ```
 
@@ -53,7 +53,8 @@ vertex_ai:
   location: "us-central1"  # optional, default: us-central1
 
 gelf:
-  default_model: "gemini-2.5-flash-preview-05-20"  # optional
+  flash_model: "gemini-2.5-flash-preview-05-20"  # optional
+  pro_model: "gemini-2.5-pro-preview-05-06"       # optional
 ```
 
 #### Environment Variables (Alternative)
@@ -71,7 +72,7 @@ export VERTEXAI_PROJECT="your-project-id"
 export VERTEXAI_LOCATION="us-central1"
 ```
 
-**Note**: The default model can only be configured via configuration file, not environment variables.
+**Note**: Model configuration (flash_model and pro_model) can only be configured via configuration file, not environment variables.
 
 ### 2. Google Cloud Authentication
 
@@ -128,7 +129,8 @@ gelf git message --model gemini-2.0-flash-exp
 
 - **Target**: Staged changes only (`git diff --staged`)
 - **AI Provider**: Vertex AI (Gemini models)
-- **Default Model**: gemini-2.5-flash-preview-05-20
+- **Default Flash Model**: gemini-2.5-flash-preview-05-20
+- **Default Pro Model**: gemini-2.5-pro-preview-05-06
 - **UI Framework**: Bubble Tea (TUI)
 - **CLI Framework**: Cobra
 
@@ -226,7 +228,8 @@ vertex_ai:
   location: string       # Vertex AI location (default: us-central1)
 
 gelf:
-  default_model: string  # Gemini model to use (default: gemini-2.5-flash-preview-05-20)
+  flash_model: string    # Gemini Flash model to use (default: gemini-2.5-flash-preview-05-20)
+  pro_model: string      # Gemini Pro model to use (default: gemini-2.5-pro-preview-05-06)
 ```
 
 ### Environment Variables
@@ -234,10 +237,10 @@ gelf:
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key file | - | ✅ |
-| `VERTEXAI_PROJECT` | Google Cloud project ID | - | ✅ |
+| `VERTEXAI_PROJECT` or `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | - | ✅ |
 | `VERTEXAI_LOCATION` | Vertex AI location | `us-central1` | ❌ |
 
-**Note**: Model configuration is only available through configuration files.
+**Note**: Model configuration (flash_model and pro_model) is only available through configuration files.
 
 ## 🔨 Development
 
