@@ -100,6 +100,7 @@ gelf git commit
    - Press `y` to approve or `n` to cancel
    - Press `q` or `Ctrl+C` to cancel during generation
    - The commit will be executed automatically upon approval
+   - Success message displays after TUI exits
 
 ### Command Options
 
@@ -161,29 +162,29 @@ main.go             # Application entry point
 ```
 ┌─────────────────────────────────────────┐
 │ ⠙ Generating commit message...         │
-│                                         │
-│ ████████████████░░░░░░░░░░░░░░ 75%      │
 └─────────────────────────────────────────┘
 ```
 
 ### Confirmation Screen
 ```
-┌──────────────────────────────────────────────┐
-│ 📝 Generated Commit Message:                │
-│ ┌──────────────────────────────────────────┐ │
-│ │ feat: add user authentication system    │ │
-│ │ with JWT support                         │ │
-│ └──────────────────────────────────────────┘ │
-│ Commit this message? (y)es / (n)o            │
-└──────────────────────────────────────────────┘
+┌────────────────────────────────────────────────┐
+│                                                │
+│  📝 Generated Commit Message:                 │
+│                                                │
+│  ┌──────────────────────────────────────────┐ │
+│  │ feat: add user authentication system    │ │
+│  │ with JWT support                         │ │
+│  └──────────────────────────────────────────┘ │
+│                                                │
+│  Commit this message? (y)es / (n)o            │
+│                                                │
+└────────────────────────────────────────────────┘
 ```
 
 ### Committing Screen
 ```
 ┌─────────────────────────────────────────┐
 │ ⠙ Committing changes...                │
-│                                         │
-│ ██████████████████████████████ 100%    │
 └─────────────────────────────────────────┘
 ```
 
@@ -203,12 +204,12 @@ main.go             # Application entry point
 ```
 
 The interface features:
-- **Cyan colored** loading messages with animated spinners
-- **Blue progress bars** with percentage indicators
+- **Cyan colored** loading messages with animated spinners (using Points spinner style)
 - **Rounded border frames** for all states
-- **Background colored boxes** for commit messages
-- **Color-coded states**: Cyan for loading, Blue for confirmation, Green for success, Red for errors
+- **Dark background colored boxes** for commit messages with italic text
+- **Color-coded states**: Cyan for loading/generating, Blue for confirmation, Green for success, Red for errors
 - **Icon prefixes**: 📝 for messages, ✓ for success, ✗ for errors
+- **Simple, clean design** with proper spacing and padding
 
 ## ⚙️ Configuration Reference
 
