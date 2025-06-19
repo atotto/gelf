@@ -1,12 +1,13 @@
 # 🚀 gelf
 
-gelf is a Go-based CLI tool that automatically generates Git commit messages using Vertex AI (Gemini). It analyzes staged changes and generates appropriate commit messages through a modern, interactive TUI interface built with Bubble Tea.
+gelf is a Go-based CLI tool that automatically generates Git commit messages and provides AI-powered code reviews using Vertex AI (Gemini). It analyzes git changes and provides intelligent feedback through a modern, interactive TUI interface built with Bubble Tea.
 
 ## ✨ Features
 
 - 🤖 **AI-Powered**: Intelligent commit message generation using Vertex AI (Gemini)
+- 🔍 **Code Review**: AI-powered code review with streaming real-time feedback
 - 🎨 **Clean TUI**: Simple and intuitive user interface built with Bubble Tea  
-- ⚡ **Fast Processing**: Real-time progress indicators with percentage display
+- ⚡ **Fast Processing**: Real-time progress indicators and streaming responses
 - 🛡️ **Safe Operations**: Only operates on staged changes for secure workflow
 - 🌐 **Cross-Platform**: Works seamlessly across different operating systems
 
@@ -90,14 +91,14 @@ export VERTEXAI_LOCATION="us-central1"
 
 ## 🚀 Usage
 
-### Basic Workflow
+### Commit Message Generation
 
 1. Stage your changes:
 ```bash
 git add .
 ```
 
-2. Run gelf:
+2. Generate and commit with AI:
 ```bash
 gelf commit
 ```
@@ -110,6 +111,25 @@ gelf commit
    - The commit will be executed automatically upon approval
    - Success message displays after TUI exits
 
+### Code Review
+
+1. Review unstaged changes:
+```bash
+gelf review
+```
+
+2. Review staged changes:
+```bash
+gelf review --staged
+```
+
+The review feature provides:
+   - Real-time streaming AI analysis
+   - Comprehensive code review feedback
+   - Security vulnerability detection
+   - Performance and maintainability suggestions
+   - No interactive prompts - displays results directly
+
 ### Command Options
 
 ```bash
@@ -118,6 +138,9 @@ gelf --help
 
 # Show commit command help
 gelf commit --help
+
+# Show review command help
+gelf review --help
 
 # Generate commit message with TUI interface (default behavior)
 gelf commit
@@ -130,32 +153,44 @@ gelf commit --dry-run --quiet
 
 # Use specific model temporarily
 gelf commit --model gemini-2.0-flash-exp
+
+# Review unstaged changes (default)
+gelf review
+
+# Review staged changes
+gelf review --staged
+
+# Use specific model for review
+gelf review --model gemini-2.0-flash-exp
 ```
 
 ## 🔧 Technical Specifications
 
 ### Architecture
 
-- **Target**: Staged changes only (`git diff --staged`)
+- **Commit Target**: Staged changes only (`git diff --staged`)
+- **Review Target**: Both staged (`git diff --staged`) and unstaged (`git diff`) changes
 - **AI Provider**: Vertex AI (Gemini models)
 - **Default Flash Model**: gemini-2.5-flash-preview-05-20
 - **Default Pro Model**: gemini-2.5-pro-preview-05-06
 - **UI Framework**: Bubble Tea (TUI)
 - **CLI Framework**: Cobra
+- **Streaming**: Real-time AI response streaming for code reviews
 
 ### Project Structure
 
 ```
 cmd/
 ├── root.go          # Root command definition
-└── commit.go        # Commit command implementation
+├── commit.go        # Commit command implementation
+└── review.go        # Review command implementation
 internal/
 ├── git/
-│   └── diff.go      # Git operations (git diff --staged)
+│   └── diff.go      # Git operations (staged and unstaged diffs)
 ├── ai/
-│   └── vertex.go    # Vertex AI integration for message generation
+│   └── vertex.go    # Vertex AI integration (commit messages and code review)
 ├── ui/
-│   └── tui.go       # Bubble Tea TUI implementation
+│   └── tui.go       # Bubble Tea TUI implementation (commit and review)
 └── config/
     └── config.go    # Configuration management (API keys etc)
 main.go             # Application entry point
@@ -163,14 +198,16 @@ main.go             # Application entry point
 
 ## 🎨 TUI Interface
 
-### Loading Screen
+### Commit Workflow
+
+#### Loading Screen
 ```
 ┌─────────────────────────────────────────┐
 │ ⠙ Generating commit message...         │
 └─────────────────────────────────────────┘
 ```
 
-### Confirmation Screen
+#### Confirmation Screen
 ```
 ┌────────────────────────────────────────────────┐
 │                                                │
@@ -186,14 +223,14 @@ main.go             # Application entry point
 └────────────────────────────────────────────────┘
 ```
 
-### Committing Screen
+#### Committing Screen
 ```
 ┌─────────────────────────────────────────┐
 │ ⠙ Committing changes...                │
 └─────────────────────────────────────────┘
 ```
 
-### Success Screen
+#### Success Screen
 ```
 ┌─────────────────────────────────────────────────┐
 │ ✓ Committed: feat: add user authentication     │
@@ -201,7 +238,19 @@ main.go             # Application entry point
 └─────────────────────────────────────────────────┘
 ```
 
-### Error Screen
+### Review Workflow
+
+#### Loading Screen
+```
+┌─────────────────────────────────────────┐
+│ ⠙ Analyzing code for review...         │
+└─────────────────────────────────────────┘
+```
+
+#### Streaming Review Display
+The review results are displayed in real-time as streaming text without frames, providing immediate feedback as the AI analyzes the code changes.
+
+### Error Screens
 ```
 ┌─────────────────────────────────────────┐
 │ ✗ Error: No staged changes found       │
@@ -210,10 +259,11 @@ main.go             # Application entry point
 
 The interface features:
 - **Cyan colored** loading messages with animated spinners (using Points spinner style)
-- **Rounded border frames** for all states
+- **Rounded border frames** for loading and confirmation states
 - **Dark background colored boxes** for commit messages with italic text
+- **Streaming text output** for code reviews without UI frames
 - **Color-coded states**: Cyan for loading/generating, Blue for confirmation, Green for success, Red for errors
-- **Icon prefixes**: 📝 for messages, ✓ for success, ✗ for errors
+- **Icon prefixes**: 📝 for messages, 🔍 for reviews, ✓ for success, ✗ for errors
 - **Simple, clean design** with proper spacing and padding
 
 ## ⚙️ Configuration Reference
@@ -272,8 +322,10 @@ go mod tidy
 go build                     # Build the project
 go test ./...                # Run tests
 go mod tidy                  # Tidy dependencies
-go run main.go commit        # Run in development
+go run main.go commit        # Run commit command in development
 go run main.go commit --dry-run  # Run message generation only
+go run main.go review        # Run review command in development
+go run main.go review --staged  # Run review for staged changes
 ```
 
 ## 📦 Dependencies

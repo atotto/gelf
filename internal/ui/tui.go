@@ -295,3 +295,184 @@ func (m *model) Run() error {
 	return err
 }
 
+// Review TUI model
+type reviewModel struct {
+	aiClient *ai.VertexAIClient
+	diff     string
+	review   string
+	err      error
+	state    reviewState
+	spinner  spinner.Model
+	sub      chan msgReviewChunk
+}
+
+type reviewState int
+
+const (
+	reviewStateLoading reviewState = iota
+	reviewStateStreaming
+	reviewStateDisplay
+	reviewStateError
+)
+
+type msgReviewGenerated struct {
+	review string
+	err    error
+}
+
+type msgReviewChunk struct {
+	chunk string
+}
+
+type msgReviewComplete struct {
+	err error
+}
+
+func NewReviewTUI(aiClient *ai.VertexAIClient, diff string) *reviewModel {
+	s := spinner.New()
+	s.Spinner = spinner.Points
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	
+	return &reviewModel{
+		aiClient: aiClient,
+		diff:     diff,
+		state:    reviewStateLoading,
+		spinner:  s,
+		sub:      make(chan msgReviewChunk, 100),
+	}
+}
+
+func (m *reviewModel) Init() tea.Cmd {
+	return tea.Batch(m.spinner.Tick, m.generateReviewStreaming(), m.waitForActivity(m.sub))
+}
+
+func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch m.state {
+		case reviewStateLoading, reviewStateStreaming:
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
+		case reviewStateDisplay, reviewStateError:
+			return m, tea.Quit
+		}
+
+	case msgReviewChunk:
+		if m.state == reviewStateLoading {
+			m.state = reviewStateStreaming
+		}
+		m.review += msg.chunk
+		return m, m.waitForActivity(m.sub)
+
+	case msgReviewComplete:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = reviewStateError
+		} else {
+			m.state = reviewStateDisplay
+		}
+		return m, tea.Quit
+
+	case msgReviewGenerated:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = reviewStateError
+		} else {
+			m.review = msg.review
+			m.state = reviewStateDisplay
+		}
+		return m, tea.Quit
+	}
+
+	// Update spinner
+	if m.state == reviewStateLoading {
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m *reviewModel) View() string {
+	switch m.state {
+	case reviewStateLoading:
+		content := fmt.Sprintf("%s %s",
+			m.spinner.View(),
+			generatingStyle.Render("Analyzing code for review..."))
+		return loadingFrameStyle.Render(content)
+
+	case reviewStateStreaming:
+		// Display streaming content without frame
+		return m.review
+
+	case reviewStateDisplay:
+		return "" // Review will be printed after TUI exits
+
+	case reviewStateError:
+		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
+	}
+
+	return ""
+}
+
+func (m *reviewModel) generateReview() tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		ctx := context.Background()
+		review, err := m.aiClient.ReviewCode(ctx, m.diff)
+		return msgReviewGenerated{
+			review: strings.TrimSpace(review),
+			err:    err,
+		}
+	})
+}
+
+func (m *reviewModel) generateReviewStreaming() tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		ctx := context.Background()
+		
+		go func() {
+			defer close(m.sub)
+			
+			err := m.aiClient.ReviewCodeStreaming(ctx, m.diff, func(chunk string) {
+				select {
+				case m.sub <- msgReviewChunk{chunk: chunk}:
+				case <-ctx.Done():
+					return
+				}
+			})
+			
+			if err != nil {
+				m.sub <- msgReviewChunk{} // Signal error by closing
+			}
+		}()
+		
+		return nil
+	})
+}
+
+func (m *reviewModel) waitForActivity(sub chan msgReviewChunk) tea.Cmd {
+	return func() tea.Msg {
+		chunk, ok := <-sub
+		if !ok {
+			// Channel closed, streaming completed
+			return msgReviewComplete{err: nil}
+		}
+		return chunk
+	}
+}
+
+func (m *reviewModel) Run() (string, error) {
+	p := tea.NewProgram(m)
+	_, err := p.Run()
+	
+	if m.err != nil {
+		return "", m.err
+	}
+	
+	return m.review, err
+}
+

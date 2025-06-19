@@ -92,6 +92,133 @@ Respond with only the commit message, no additional text or formatting.`, diff)
 	return part.Text, nil
 }
 
+func (v *VertexAIClient) ReviewCode(ctx context.Context, diff string) (string, error) {
+	prompt := fmt.Sprintf(`Analyze the following git diff and provide a comprehensive code review.
+
+REVIEW ANALYSIS GUIDE:
+1. Look at file paths and understand the affected codebase areas
+2. Examine +/- lines to understand changes (additions, deletions, modifications)
+3. Pay attention to function names, variable names, and code structure changes
+4. Consider the context lines (prefixed with space) to understand surrounding code
+5. Identify potential issues: bugs, security concerns, performance problems, code quality
+
+REVIEW FOCUS AREAS:
+1. Code correctness and potential bugs
+2. Security vulnerabilities and best practices
+3. Performance implications
+4. Code style and maintainability
+5. Error handling and edge cases
+6. Test coverage considerations
+7. Documentation needs
+
+REVIEW FORMAT:
+Provide a structured review with:
+- Summary of changes
+- Positive aspects (what's done well)
+- Issues and concerns (if any)
+- Suggestions for improvement
+- Overall assessment
+
+Use clear, constructive language. Be specific about line numbers when referencing issues.
+If the code looks good, acknowledge that and provide any minor suggestions.
+
+Git diff:
+%s
+
+Provide a detailed code review:`, diff)
+
+	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
+		[]*genai.Content{
+			genai.NewUserContentFromText(prompt),
+		},
+		&genai.GenerateContentConfig{
+			Temperature: genai.Ptr(float32(0.2)),
+		})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate code review: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 {
+		return "", fmt.Errorf("no candidates in response")
+	}
+
+	if len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no content parts in response")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	if part.Text == "" {
+		return "", fmt.Errorf("empty text in response part")
+	}
+
+	return part.Text, nil
+}
+
+func (v *VertexAIClient) ReviewCodeStreaming(ctx context.Context, diff string, callback func(string)) error {
+	prompt := fmt.Sprintf(`Analyze the following git diff and provide a comprehensive code review.
+
+REVIEW ANALYSIS GUIDE:
+1. Look at file paths and understand the affected codebase areas
+2. Examine +/- lines to understand changes (additions, deletions, modifications)
+3. Pay attention to function names, variable names, and code structure changes
+4. Consider the context lines (prefixed with space) to understand surrounding code
+5. Identify potential issues: bugs, security concerns, performance problems, code quality
+
+REVIEW FOCUS AREAS:
+1. Code correctness and potential bugs
+2. Security vulnerabilities and best practices
+3. Performance implications
+4. Code style and maintainability
+5. Error handling and edge cases
+6. Test coverage considerations
+7. Documentation needs
+
+REVIEW FORMAT:
+Provide a structured review with:
+- Summary of changes
+- Positive aspects (what's done well)
+- Issues and concerns (if any)
+- Suggestions for improvement
+- Overall assessment
+
+Use clear, constructive language. Be specific about line numbers when referencing issues.
+If the code looks good, acknowledge that and provide any minor suggestions.
+
+Git diff:
+%s
+
+Provide a detailed code review:`, diff)
+
+	iter := v.client.Models.GenerateContentStream(ctx, v.flashModel,
+		[]*genai.Content{
+			genai.NewUserContentFromText(prompt),
+		},
+		&genai.GenerateContentConfig{
+			Temperature: genai.Ptr(float32(0.2)),
+		})
+
+	for resp, err := range iter {
+		if err != nil {
+			return fmt.Errorf("failed to get streaming response: %w", err)
+		}
+
+		if len(resp.Candidates) == 0 {
+			continue
+		}
+
+		if len(resp.Candidates[0].Content.Parts) == 0 {
+			continue
+		}
+
+		part := resp.Candidates[0].Content.Parts[0]
+		if part.Text != "" {
+			callback(part.Text)
+		}
+	}
+
+	return nil
+}
+
 func (v *VertexAIClient) Close() error {
 	return nil
 }

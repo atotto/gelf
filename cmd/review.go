@@ -1,0 +1,92 @@
+package cmd
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/EkeMinusYou/gelf/internal/ai"
+	"github.com/EkeMinusYou/gelf/internal/config"
+	"github.com/EkeMinusYou/gelf/internal/git"
+	"github.com/EkeMinusYou/gelf/internal/ui"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/cobra"
+)
+
+var reviewCmd = &cobra.Command{
+	Use:   "review",
+	Short: "Review code changes using AI",
+	Long:  `Analyzes git diff and provides code review feedback using Vertex AI (Gemini).`,
+	RunE:  runReview,
+}
+
+var (
+	reviewStaged bool
+	reviewModel  string
+)
+
+func init() {
+	reviewCmd.Flags().BoolVar(&reviewStaged, "staged", false, "Review staged changes instead of unstaged changes")
+	reviewCmd.Flags().StringVar(&reviewModel, "model", "", "Override default model for this review")
+}
+
+func runReview(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	if reviewModel != "" {
+		cfg.FlashModel = reviewModel
+	}
+
+	var diff string
+	if reviewStaged {
+		diff, err = git.GetStagedDiff()
+		if err != nil {
+			return fmt.Errorf("failed to get staged changes: %w", err)
+		}
+	} else {
+		diff, err = git.GetUnstagedDiff()
+		if err != nil {
+			return fmt.Errorf("failed to get unstaged changes: %w", err)
+		}
+	}
+
+	if diff == "" {
+		warningStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("3")).
+			Bold(true).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("3")).
+			Padding(0, 1).
+			Margin(1, 0)
+
+		var message string
+		if reviewStaged {
+			message = warningStyle.Render("⚠ No staged changes found. Please stage some changes first with 'git add'.")
+		} else {
+			message = warningStyle.Render("⚠ No unstaged changes found.")
+		}
+		fmt.Print(message + "\n")
+		return nil
+	}
+
+	aiClient, err := ai.NewVertexAIClient(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create AI client: %w", err)
+	}
+
+	// Use TUI for loading experience
+	reviewTUI := ui.NewReviewTUI(aiClient, diff)
+	review, err := reviewTUI.Run()
+	if err != nil {
+		return fmt.Errorf("failed to generate code review: %w", err)
+	}
+
+	// Display the review without any frame
+	fmt.Print(review + "\n")
+	return nil
+}
