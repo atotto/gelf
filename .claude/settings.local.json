@@ -15,7 +15,8 @@
       "Bash(./geminielf git message --help)",
       "Bash(./geminielf commit:*)",
       "Bash(grep:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(go list:*)"
     ],
     "deny": []
   }
