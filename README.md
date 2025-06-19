@@ -32,6 +32,13 @@ go build
 go install github.com/EkeMinusYou/gelf@latest
 ```
 
+### Install via Homebrew
+
+```bash
+brew tap ekeminusyou/gelf
+brew install ekeminusyou/gelf/gelf
+```
+
 ## ⚙️ Setup
 
 ### 1. Configuration Options
