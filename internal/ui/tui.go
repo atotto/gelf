@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -304,6 +305,8 @@ type reviewModel struct {
 	state    reviewState
 	spinner  spinner.Model
 	sub      chan msgReviewChunk
+	noStyle  bool
+	renderer *glamour.TermRenderer
 }
 
 type reviewState int
@@ -328,10 +331,21 @@ type msgReviewComplete struct {
 	err error
 }
 
-func NewReviewTUI(aiClient *ai.VertexAIClient, diff string) *reviewModel {
+func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *reviewModel {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	
+	var renderer *glamour.TermRenderer
+	if !noStyle {
+		r, err := glamour.NewTermRenderer(
+			glamour.WithAutoStyle(),
+			glamour.WithWordWrap(80),
+		)
+		if err == nil {
+			renderer = r
+		}
+	}
 	
 	return &reviewModel{
 		aiClient: aiClient,
@@ -339,6 +353,8 @@ func NewReviewTUI(aiClient *ai.VertexAIClient, diff string) *reviewModel {
 		state:    reviewStateLoading,
 		spinner:  s,
 		sub:      make(chan msgReviewChunk, 100),
+		noStyle:  noStyle,
+		renderer: renderer,
 	}
 }
 
@@ -406,8 +422,19 @@ func (m *reviewModel) View() string {
 		return loadingFrameStyle.Render(content)
 
 	case reviewStateStreaming:
-		// Display streaming content without frame
-		return m.review
+		// Display streaming content with styling if available
+		if m.noStyle || m.renderer == nil {
+			return m.review
+		}
+		
+		// Try to render the current content with glamour
+		styled, err := m.renderer.Render(m.review)
+		if err != nil {
+			// Fallback to plain text if rendering fails
+			return m.review
+		}
+		
+		return styled
 
 	case reviewStateDisplay:
 		return "" // Review will be printed after TUI exits

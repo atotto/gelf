@@ -9,6 +9,7 @@ import (
 	"github.com/EkeMinusYou/gelf/internal/git"
 	"github.com/EkeMinusYou/gelf/internal/ui"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
@@ -23,11 +24,13 @@ var reviewCmd = &cobra.Command{
 var (
 	reviewStaged bool
 	reviewModel  string
+	noStyle      bool
 )
 
 func init() {
 	reviewCmd.Flags().BoolVar(&reviewStaged, "staged", false, "Review staged changes instead of unstaged changes")
 	reviewCmd.Flags().StringVar(&reviewModel, "model", "", "Override default model for this review")
+	reviewCmd.Flags().BoolVar(&noStyle, "no-style", false, "Disable markdown styling")
 }
 
 func runReview(cmd *cobra.Command, args []string) error {
@@ -80,13 +83,35 @@ func runReview(cmd *cobra.Command, args []string) error {
 	}
 
 	// Use TUI for loading experience
-	reviewTUI := ui.NewReviewTUI(aiClient, diff)
+	reviewTUI := ui.NewReviewTUI(aiClient, diff, noStyle)
 	review, err := reviewTUI.Run()
 	if err != nil {
 		return fmt.Errorf("failed to generate code review: %w", err)
 	}
 
-	// Display the review without any frame
-	fmt.Print(review + "\n")
+	// Style and display the review
+	if noStyle {
+		fmt.Print(review + "\n")
+	} else {
+		// Create a glamour renderer with auto-detected style
+		renderer, err := glamour.NewTermRenderer(
+			glamour.WithAutoStyle(),
+			glamour.WithWordWrap(80),
+		)
+		if err != nil {
+			// Fallback to plain text if glamour fails
+			fmt.Print(review + "\n")
+			return nil
+		}
+
+		styled, err := renderer.Render(review)
+		if err != nil {
+			// Fallback to plain text if rendering fails
+			fmt.Print(review + "\n")
+			return nil
+		}
+
+		fmt.Print(styled)
+	}
 	return nil
 }

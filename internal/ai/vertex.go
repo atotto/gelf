@@ -112,9 +112,9 @@ REVIEW FOCUS AREAS:
 7. Documentation needs
 
 REVIEW FORMAT:
-Provide a structured review with:
+Provide a structured review in Markdown format with:
 - Summary of changes
-- Positive aspects (what's done well)
+- Positive aspects (what's done well)  
 - Issues and concerns (if any)
 - Suggestions for improvement
 - Overall assessment
@@ -122,10 +122,17 @@ Provide a structured review with:
 Use clear, constructive language. Be specific about line numbers when referencing issues.
 If the code looks good, acknowledge that and provide any minor suggestions.
 
+Use proper Markdown formatting including:
+- Headers (##, ###) for sections
+- Code blocks (triple backticks) for code snippets
+- Lists (-, *) for bullet points
+- **Bold** for emphasis
+- Backticks for inline code/variable/function names
+
 Git diff:
 %s
 
-Provide a detailed code review:`, diff)
+Provide a detailed code review in Markdown format:`, diff)
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{
@@ -174,9 +181,9 @@ REVIEW FOCUS AREAS:
 7. Documentation needs
 
 REVIEW FORMAT:
-Provide a structured review with:
+Provide a structured review in Markdown format with:
 - Summary of changes
-- Positive aspects (what's done well)
+- Positive aspects (what's done well)  
 - Issues and concerns (if any)
 - Suggestions for improvement
 - Overall assessment
@@ -184,10 +191,17 @@ Provide a structured review with:
 Use clear, constructive language. Be specific about line numbers when referencing issues.
 If the code looks good, acknowledge that and provide any minor suggestions.
 
+Use proper Markdown formatting including:
+- Headers (##, ###) for sections
+- Code blocks (triple backticks) for code snippets
+- Lists (-, *) for bullet points
+- **Bold** for emphasis
+- Backticks for inline code/variable/function names
+
 Git diff:
 %s
 
-Provide a detailed code review:`, diff)
+Provide a detailed code review in Markdown format:`, diff)
 
 	iter := v.client.Models.GenerateContentStream(ctx, v.flashModel,
 		[]*genai.Content{
