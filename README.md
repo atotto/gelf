@@ -98,6 +98,7 @@ gelf commit
 3. Interactive TUI operations:
    - Review the AI-generated commit message
    - Press `y` to approve or `n` to cancel
+   - Press `e` to edit the commit message
    - Press `q` or `Ctrl+C` to cancel during generation
    - The commit will be executed automatically upon approval
    - Success message displays after TUI exits
@@ -173,7 +174,7 @@ main.go             # Application entry point
 │  │ with JWT support                         │ │
 │  └──────────────────────────────────────────┘ │
 │                                                │
-│  Commit this message? (y)es / (n)o            │
+│  Commit this message? (y)es / (n)o / (e)dit   │
 │                                                │
 └────────────────────────────────────────────────┘
 ```
