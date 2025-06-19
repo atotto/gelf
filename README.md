@@ -92,7 +92,7 @@ git add .
 
 2. Run gelf:
 ```bash
-gelf git commit
+gelf commit
 ```
 
 3. Interactive TUI operations:
@@ -108,20 +108,20 @@ gelf git commit
 # Show help
 gelf --help
 
-# Show git subcommand help
-gelf git --help
+# Show commit command help
+gelf commit --help
 
-# Show git commit subcommand help
-gelf git commit --help
+# Generate commit message with TUI interface (default behavior)
+gelf commit
 
-# Generate commit message only (for external tool integration)
-gelf git message
+# Generate commit message only with diff display (for debugging)
+gelf commit --dry-run
 
-# Show diff with generated message (for debugging)
-gelf git message --dry-run
+# Generate commit message only without diff (for external tool integration)
+gelf commit --dry-run --quiet
 
 # Use specific model temporarily
-gelf git message --model gemini-2.0-flash-exp
+gelf commit --model gemini-2.0-flash-exp
 ```
 
 ## 🔧 Technical Specifications
@@ -140,10 +140,7 @@ gelf git message --model gemini-2.0-flash-exp
 ```
 cmd/
 ├── root.go          # Root command definition
-└── git/
-    ├── git.go       # Git subcommand group
-    ├── commit.go    # git commit subcommand implementation
-    └── message.go   # git message subcommand implementation
+└── commit.go        # Commit command implementation
 internal/
 ├── git/
 │   └── diff.go      # Git operations (git diff --staged)
@@ -264,11 +261,11 @@ go mod tidy
 ### Available Commands
 
 ```bash
-go build                  # Build the project
-go test ./...             # Run tests
-go mod tidy               # Tidy dependencies
-go run main.go git commit    # Run in development
-go run main.go git message   # Run message generation only
+go build                     # Build the project
+go test ./...                # Run tests
+go mod tidy                  # Tidy dependencies
+go run main.go commit        # Run in development
+go run main.go commit --dry-run  # Run message generation only
 ```
 
 ## 📦 Dependencies

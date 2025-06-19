@@ -126,3 +126,7 @@ devcontainerの設定：
 - `VERTEXAI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)
 
 モデル設定は設定ファイル（gelf.yml）でのみ変更可能です。
+
+## 覚書
+
+- 仕様に変更があった場合は、README.md を更新すること
