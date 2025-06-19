@@ -54,15 +54,15 @@ main.go               # アプリケーションエントリーポイント
 ## コマンド使用法
 
 ```bash
-# Git関連AIタスク
-gelf git commit      # Vertex AIを使ってステージング済み変更をコミット（TUI付き）
-gelf git message     # コミットメッセージ生成のみ（外部ツール連携用）
-gelf git message --dry-run  # diffも表示してデバッグ
-gelf git message --model MODEL  # 一時的にモデルを変更
+# コミット関連
+gelf commit                    # Vertex AIを使ってステージング済み変更をコミット（TUI付き）
+gelf commit --dry-run          # コミットメッセージ生成のみ（diffも表示）
+gelf commit --dry-run --quiet  # メッセージ生成のみ（外部ツール連携用）
+gelf commit --model MODEL      # 一時的にモデルを変更
 
 # ヘルプ
 gelf --help          # ヘルプ表示
-gelf git --help      # Git関連コマンドのヘルプ
+gelf commit --help   # コミットコマンドのヘルプ
 ```
 
 ## 開発コマンド
@@ -72,8 +72,8 @@ go mod init gelf     # Goモジュール初期化
 go build                  # プロジェクトビルド
 go test ./...             # テスト実行
 go mod tidy               # 依存関係整理
-go run main.go git commit    # アプリケーション実行 (git commitサブコマンド)
-go run main.go git message   # アプリケーション実行 (git messageサブコマンド)
+go run main.go commit        # アプリケーション実行 (commitコマンド)
+go run main.go commit --dry-run  # メッセージ生成のみのテスト
 ```
 
 ## 依存関係

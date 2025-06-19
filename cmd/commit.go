@@ -1,4 +1,4 @@
-package git
+package cmd
 
 import (
 	"context"
@@ -20,12 +20,28 @@ var commitCmd = &cobra.Command{
 	RunE:  runCommit,
 }
 
+var (
+	dryRun bool
+	quiet  bool
+	model  string
+)
+
+func init() {
+	commitCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Generate message only without committing")
+	commitCmd.Flags().BoolVar(&quiet, "quiet", false, "Don't show diff output (only with --dry-run)")
+	commitCmd.Flags().StringVar(&model, "model", "", "Override default model for this generation")
+}
+
 func runCommit(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	if model != "" {
+		cfg.FlashModel = model
 	}
 
 	diff, err := git.GetStagedDiff()
@@ -43,13 +59,32 @@ func runCommit(cmd *cobra.Command, args []string) error {
 			Margin(1, 0)
 		
 		message := warningStyle.Render("⚠ No staged changes found. Please stage some changes first with 'git add'.")
-		fmt.Print(message + "\n")
-		return nil
+		if dryRun {
+			fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", message)
+			return fmt.Errorf("no staged changes")
+		} else {
+			fmt.Print(message + "\n")
+			return nil
+		}
 	}
 
 	aiClient, err := ai.NewVertexAIClient(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create AI client: %w", err)
+	}
+
+	if dryRun {
+		if !quiet {
+			fmt.Fprintf(cmd.ErrOrStderr(), "=== Staged Changes ===\n%s\n\n", diff)
+		}
+
+		message, err := aiClient.GenerateCommitMessage(ctx, diff)
+		if err != nil {
+			return fmt.Errorf("failed to generate commit message: %w", err)
+		}
+
+		fmt.Print(message)
+		return nil
 	}
 
 	tui := ui.NewTUI(aiClient, diff)

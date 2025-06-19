@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"github.com/EkeMinusYou/gelf/cmd/git"
-
 	"github.com/spf13/cobra"
 )
 
@@ -18,5 +16,5 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.AddCommand(git.GitCmd)
+	rootCmd.AddCommand(commitCmd)
 }
