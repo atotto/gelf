@@ -162,6 +162,9 @@ gelf review --staged
 
 # Use specific model for review
 gelf review --model gemini-2.0-flash-exp
+
+# Disable markdown styling in review output (for plain text)
+gelf review --no-style
 ```
 
 ## 🔧 Technical Specifications
@@ -335,6 +338,7 @@ go run main.go review --staged  # Run review for staged changes
 - [`github.com/charmbracelet/bubbletea`](https://github.com/charmbracelet/bubbletea) - TUI framework
 - [`github.com/charmbracelet/lipgloss`](https://github.com/charmbracelet/lipgloss) - Styling and layout
 - [`github.com/charmbracelet/bubbles`](https://github.com/charmbracelet/bubbles) - TUI components (spinner)
+- [`github.com/charmbracelet/glamour`](https://github.com/charmbracelet/glamour) - Markdown rendering for code reviews
 - [`github.com/spf13/cobra`](https://github.com/spf13/cobra) - CLI framework
 - [`gopkg.in/yaml.v3`](https://gopkg.in/yaml.v3) - YAML configuration file support
 
