@@ -54,7 +54,7 @@ type msgCommitDone struct {
 func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s := spinner.New()
 	s.Spinner = spinner.Points
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	s.Style = loadingStyle
 	
 	ti := textinput.New()
 	ti.Placeholder = "Enter your commit message..."
@@ -152,30 +152,34 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
-		return fmt.Sprintf("%s Generating commit message...", m.spinner.View())
+		return fmt.Sprintf("%s %s", 
+			m.spinner.View(), 
+			loadingStyle.Render("Generating commit message..."))
 
 	case stateConfirm:
-		header := "📝 Generated Commit Message:"
-		message := m.commitMessage
-		prompt := "Commit this message? (y)es / (e)dit / (n)o"
+		header := titleStyle.Render("📝 Generated Commit Message:")
+		message := messageStyle.Render(m.commitMessage)
+		prompt := promptStyle.Render("Commit this message? (y)es / (e)dit / (n)o")
 		
 		return fmt.Sprintf("%s\n\n%s\n\n%s", header, message, prompt)
 
 	case stateEditing:
-		header := "✏️  Edit Commit Message:"
+		header := titleStyle.Render("✏️  Edit Commit Message:")
 		inputView := m.textInput.View()
-		prompt := "Press Enter to confirm, Esc to cancel"
+		prompt := editPromptStyle.Render("Press Enter to confirm, Esc to cancel")
 		
 		return fmt.Sprintf("%s\n\n%s\n\n%s", header, inputView, prompt)
 
 	case stateCommitting:
-		return fmt.Sprintf("%s Committing changes...", m.spinner.View())
+		return fmt.Sprintf("%s %s", 
+			m.spinner.View(), 
+			loadingStyle.Render("Committing changes..."))
 
 	case stateSuccess:
 		return ""
 
 	case stateError:
-		return fmt.Sprintf("✗ Error: %v", m.err)
+		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
 	}
 
 	return ""
@@ -211,7 +215,8 @@ func (m *model) Run() error {
 	
 	// Print success message after TUI exits so it remains visible
 	if m.state == stateSuccess {
-		fmt.Printf("✓ Committed: %s\n", m.commitMessage)
+		successMessage := successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage))
+		fmt.Print(successMessage + "\n")
 	}
 	
 	return err
@@ -252,10 +257,44 @@ type msgReviewComplete struct {
 	err error
 }
 
+// リッチなカラースタイル（枠なし）
+var (
+	titleStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("6")) // シアン
+
+	messageStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("15")).   // ブライトホワイト
+		Bold(true).
+		Italic(true)
+
+	promptStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("4")).    // ブルー
+		Bold(true)
+
+	successStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("2")).    // グリーン
+		Bold(true)
+
+	errorStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("1")).    // レッド
+		Bold(true)
+
+	loadingStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("6")).    // シアン
+		Bold(true)
+
+	editPromptStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("3")).    // イエロー
+		Bold(true).
+		Margin(1, 0, 0, 0)
+
+)
+
 func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *reviewModel {
 	s := spinner.New()
 	s.Spinner = spinner.Points
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	s.Style = loadingStyle
 	
 	var renderer *glamour.TermRenderer
 	if !noStyle {
@@ -337,7 +376,9 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *reviewModel) View() string {
 	switch m.state {
 	case reviewStateLoading:
-		return fmt.Sprintf("%s Analyzing code for review...", m.spinner.View())
+		return fmt.Sprintf("%s %s", 
+			m.spinner.View(), 
+			loadingStyle.Render("Analyzing code for review..."))
 
 	case reviewStateStreaming:
 		// Display streaming content with styling if available
@@ -358,22 +399,12 @@ func (m *reviewModel) View() string {
 		return "" // Review will be printed after TUI exits
 
 	case reviewStateError:
-		return fmt.Sprintf("✗ Error: %v", m.err)
+		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
 	}
 
 	return ""
 }
 
-func (m *reviewModel) generateReview() tea.Cmd {
-	return tea.Cmd(func() tea.Msg {
-		ctx := context.Background()
-		review, err := m.aiClient.ReviewCode(ctx, m.diff)
-		return msgReviewGenerated{
-			review: strings.TrimSpace(review),
-			err:    err,
-		}
-	})
-}
 
 func (m *reviewModel) generateReviewStreaming() tea.Cmd {
 	return tea.Cmd(func() tea.Msg {

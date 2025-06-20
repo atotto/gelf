@@ -10,6 +10,7 @@ import (
 	"github.com/EkeMinusYou/gelf/internal/ui"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,10 @@ var (
 	reviewModel  string
 	noStyle      bool
 )
+
+var reviewWarningStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("3")).    // イエロー
+	Bold(true)
 
 func init() {
 	reviewCmd.Flags().BoolVar(&reviewStaged, "staged", false, "Review staged changes instead of unstaged changes")
@@ -60,9 +65,9 @@ func runReview(cmd *cobra.Command, args []string) error {
 	if diff == "" {
 		var message string
 		if reviewStaged {
-			message = "⚠ No staged changes found. Please stage some changes first with 'git add'."
+			message = reviewWarningStyle.Render("⚠ No staged changes found. Please stage some changes first with 'git add'.")
 		} else {
-			message = "⚠ No unstaged changes found."
+			message = reviewWarningStyle.Render("⚠ No unstaged changes found.")
 		}
 		fmt.Print(message + "\n")
 		return nil

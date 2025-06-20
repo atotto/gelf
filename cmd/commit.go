@@ -9,6 +9,7 @@ import (
 	"github.com/EkeMinusYou/gelf/internal/git"
 	"github.com/EkeMinusYou/gelf/internal/ui"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,10 @@ var (
 	quiet  bool
 	model  string
 )
+
+var warningStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("3")).    // イエロー
+	Bold(true)
 
 func init() {
 	commitCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Generate message only without committing")
@@ -49,7 +54,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	}
 
 	if diff == "" {
-		message := "⚠ No staged changes found. Please stage some changes first with 'git add'."
+		message := warningStyle.Render("⚠ No staged changes found. Please stage some changes first with 'git add'.")
 		if dryRun {
 			fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", message)
 			return fmt.Errorf("no staged changes")
