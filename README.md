@@ -199,75 +199,20 @@ internal/
 main.go             # Application entry point
 ```
 
-## 🎨 TUI Interface
+## 🎨 User Interface
+
+The application provides a clean, interactive terminal interface:
 
 ### Commit Workflow
+- Loading indicator while generating commit messages
+- Review screen for generated commit messages with approval options
+- Success confirmation after successful commits
 
-#### Loading Screen
-```
-┌─────────────────────────────────────────┐
-│ ⠙ Generating commit message...         │
-└─────────────────────────────────────────┘
-```
+### Review Workflow  
+- Real-time streaming AI analysis display
+- Comprehensive code review feedback without interactive prompts
 
-#### Confirmation Screen
-```
-┌────────────────────────────────────────────────┐
-│                                                │
-│  📝 Generated Commit Message:                 │
-│                                                │
-│  ┌──────────────────────────────────────────┐ │
-│  │ feat: add user authentication system    │ │
-│  │ with JWT support                         │ │
-│  └──────────────────────────────────────────┘ │
-│                                                │
-│  Commit this message? (y)es / (n)o / (e)dit   │
-│                                                │
-└────────────────────────────────────────────────┘
-```
-
-#### Committing Screen
-```
-┌─────────────────────────────────────────┐
-│ ⠙ Committing changes...                │
-└─────────────────────────────────────────┘
-```
-
-#### Success Screen
-```
-┌─────────────────────────────────────────────────┐
-│ ✓ Committed: feat: add user authentication     │
-│   system with JWT support                       │
-└─────────────────────────────────────────────────┘
-```
-
-### Review Workflow
-
-#### Loading Screen
-```
-┌─────────────────────────────────────────┐
-│ ⠙ Analyzing code for review...         │
-└─────────────────────────────────────────┘
-```
-
-#### Streaming Review Display
-The review results are displayed in real-time as streaming text without frames, providing immediate feedback as the AI analyzes the code changes.
-
-### Error Screens
-```
-┌─────────────────────────────────────────┐
-│ ✗ Error: No staged changes found       │
-└─────────────────────────────────────────┘
-```
-
-The interface features:
-- **Cyan colored** loading messages with animated spinners (using Points spinner style)
-- **Rounded border frames** for loading and confirmation states
-- **Dark background colored boxes** for commit messages with italic text
-- **Streaming text output** for code reviews without UI frames
-- **Color-coded states**: Cyan for loading/generating, Blue for confirmation, Green for success, Red for errors
-- **Icon prefixes**: 📝 for messages, 🔍 for reviews, ✓ for success, ✗ for errors
-- **Simple, clean design** with proper spacing and padding
+The interface features color-coded states, animated progress indicators, and intuitive keyboard controls for a smooth user experience.
 
 ## ⚙️ Configuration Reference
 
