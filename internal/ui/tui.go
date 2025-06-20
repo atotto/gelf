@@ -50,70 +50,6 @@ type msgCommitDone struct {
 
 
 
-var (
-	// エレガントなスタイル
-	titleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("6"))
-	
-	messageStyle = lipgloss.NewStyle().
-		Padding(0, 1).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("8")).
-		Background(lipgloss.Color("235")).
-		Margin(0).
-		Italic(true)
-
-	commitMessageHeaderStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("6"))
-
-	promptStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("4")).
-		Bold(true).
-		Margin(1, 0, 0, 0)
-
-	successStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("2")).
-		Bold(true)
-
-	errorStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("1")).
-		Bold(true).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("1")).
-		Padding(0, 1).
-		Margin(1, 0)
-
-	// 生成中の洗練されたスタイル
-	generatingStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("6")).
-		Bold(true)
-
-
-	loadingFrameStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("6")).
-		Padding(0, 1).
-		Margin(1, 0)
-
-	confirmFrameStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("4")).
-		Padding(1, 2).
-		Margin(1, 0)
-
-	editFrameStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("3")).
-		Padding(1, 2).
-		Margin(1, 0)
-
-	editPromptStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("3")).
-		Bold(true).
-		Margin(1, 0, 0, 0)
-)
 
 func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s := spinner.New()
@@ -216,38 +152,30 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
-		content := fmt.Sprintf("%s %s",
-			m.spinner.View(),
-			generatingStyle.Render("Generating commit message..."))
-		return loadingFrameStyle.Render(content)
+		return fmt.Sprintf("%s Generating commit message...", m.spinner.View())
 
 	case stateConfirm:
-		header := commitMessageHeaderStyle.Render("📝 Generated Commit Message:")
-		message := messageStyle.Render(m.commitMessage)
-		prompt := promptStyle.Render("Commit this message? (y)es / (e)dit / (n)o")
+		header := "📝 Generated Commit Message:"
+		message := m.commitMessage
+		prompt := "Commit this message? (y)es / (e)dit / (n)o"
 		
-		content := fmt.Sprintf("%s\n\n%s\n%s", header, message, prompt)
-		return confirmFrameStyle.Render(content)
+		return fmt.Sprintf("%s\n\n%s\n\n%s", header, message, prompt)
 
 	case stateEditing:
-		header := commitMessageHeaderStyle.Render("✏️  Edit Commit Message:")
+		header := "✏️  Edit Commit Message:"
 		inputView := m.textInput.View()
-		prompt := editPromptStyle.Render("Press Enter to confirm, Esc to cancel")
+		prompt := "Press Enter to confirm, Esc to cancel"
 		
-		content := fmt.Sprintf("%s\n\n%s\n%s", header, inputView, prompt)
-		return editFrameStyle.Render(content)
+		return fmt.Sprintf("%s\n\n%s\n\n%s", header, inputView, prompt)
 
 	case stateCommitting:
-		content := fmt.Sprintf("%s %s",
-			m.spinner.View(),
-			generatingStyle.Render("Committing changes..."))
-		return loadingFrameStyle.Render(content)
+		return fmt.Sprintf("%s Committing changes...", m.spinner.View())
 
 	case stateSuccess:
 		return ""
 
 	case stateError:
-		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
+		return fmt.Sprintf("✗ Error: %v", m.err)
 	}
 
 	return ""
@@ -283,14 +211,7 @@ func (m *model) Run() error {
 	
 	// Print success message after TUI exits so it remains visible
 	if m.state == stateSuccess {
-		successFrame := lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("2")).
-			Padding(0, 1).
-			Margin(1, 0)
-		
-		successMessage := successStyle.Render(fmt.Sprintf("✓ Committed: %s", m.commitMessage))
-		fmt.Print(successFrame.Render(successMessage) + "\n")
+		fmt.Printf("✓ Committed: %s\n", m.commitMessage)
 	}
 	
 	return err
@@ -416,10 +337,7 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *reviewModel) View() string {
 	switch m.state {
 	case reviewStateLoading:
-		content := fmt.Sprintf("%s %s",
-			m.spinner.View(),
-			generatingStyle.Render("Analyzing code for review..."))
-		return loadingFrameStyle.Render(content)
+		return fmt.Sprintf("%s Analyzing code for review...", m.spinner.View())
 
 	case reviewStateStreaming:
 		// Display streaming content with styling if available
@@ -440,7 +358,7 @@ func (m *reviewModel) View() string {
 		return "" // Review will be printed after TUI exits
 
 	case reviewStateError:
-		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
+		return fmt.Sprintf("✗ Error: %v", m.err)
 	}
 
 	return ""
