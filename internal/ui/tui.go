@@ -53,7 +53,7 @@ type msgCommitDone struct {
 
 func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	s := spinner.New()
-	s.Spinner = spinner.Points
+	s.Spinner = spinner.Dot
 	s.Style = loadingStyle
 	
 	ti := textinput.New()
@@ -293,7 +293,7 @@ var (
 
 func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *reviewModel {
 	s := spinner.New()
-	s.Spinner = spinner.Points
+	s.Spinner = spinner.Dot
 	s.Style = loadingStyle
 	
 	var renderer *glamour.TermRenderer
