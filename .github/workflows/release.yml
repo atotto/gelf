@@ -29,6 +29,8 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
       - run: go mod download
+        env:
+          GOPROXY: direct
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
