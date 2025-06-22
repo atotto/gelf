@@ -16,7 +16,8 @@
       "Bash(./geminielf commit:*)",
       "Bash(grep:*)",
       "Bash(go test:*)",
-      "Bash(go list:*)"
+      "Bash(go list:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

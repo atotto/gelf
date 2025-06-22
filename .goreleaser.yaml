@@ -1,6 +1,67 @@
 version: 2
-homebrew_casks:
+
+project_name: gelf
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    hooks:
+      post:
+        - mkdir -p completions
+        - ./{{ .Path }} completion bash > completions/gelf.bash
+        - ./{{ .Path }} completion zsh > completions/gelf.zsh  
+        - ./{{ .Path }} completion fish > completions/gelf.fish
+
+brews:
   - repository:
       owner: EkeMinusYou
       name: homebrew-gelf
       token: "{{ .Env.APP_TOKEN }}"
+    name: gelf
+    description: "AI-powered Git commit message generator using Vertex AI (Gemini)"
+    homepage: "https://github.com/EkeMinusYou/gelf"
+    license: MIT
+    install: |
+      bin.install "gelf"
+      
+      # Install shell completions
+      bash_completion.install "completions/gelf.bash" => "gelf"
+      zsh_completion.install "completions/gelf.zsh" => "_gelf"
+      fish_completion.install "completions/gelf.fish"
+    test: |
+      system "#{bin}/gelf --help"
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - completions/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
