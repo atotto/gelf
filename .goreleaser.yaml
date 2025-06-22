@@ -2,23 +2,6 @@ version: 2
 
 project_name: gelf
 
-builds:
-  - env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - windows
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    hooks:
-      post:
-        - mkdir -p completions
-        - go run main.go completion bash > completions/gelf.bash
-        - go run main.go completion zsh > completions/gelf.zsh
-        - go run main.go completion fish > completions/gelf.fish
-
 homebrew_casks:
   - repository:
       owner: EkeMinusYou

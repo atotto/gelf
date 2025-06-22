@@ -31,6 +31,12 @@ jobs:
       - run: go mod download
         env:
           GOPROXY: direct
+      - name: generate completions
+        run: |
+          mkdir -p completions
+          go run main.go completion bash > completions/gelf.bash
+          go run main.go completion zsh > completions/gelf.zsh
+          go run main.go completion fish > completions/gelf.fish
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
