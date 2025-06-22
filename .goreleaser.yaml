@@ -15,9 +15,9 @@ builds:
     hooks:
       post:
         - mkdir -p completions
-        - ./{{ .Path }} completion bash > completions/gelf.bash
-        - ./{{ .Path }} completion zsh > completions/gelf.zsh  
-        - ./{{ .Path }} completion fish > completions/gelf.fish
+        - "{{ .Path }}" completion bash > completions/gelf.bash
+        - "{{ .Path }}" completion zsh > completions/gelf.zsh  
+        - "{{ .Path }}" completion fish > completions/gelf.fish
 
 homebrew_casks:
   - repository:
