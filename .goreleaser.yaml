@@ -19,7 +19,7 @@ builds:
         - ./{{ .Path }} completion zsh > completions/gelf.zsh  
         - ./{{ .Path }} completion fish > completions/gelf.fish
 
-brews:
+homebrew_casks:
   - repository:
       owner: EkeMinusYou
       name: homebrew-gelf
@@ -28,18 +28,13 @@ brews:
     description: "AI-powered Git commit message generator using Vertex AI (Gemini)"
     homepage: "https://github.com/EkeMinusYou/gelf"
     license: MIT
-    install: |
-      bin.install "gelf"
-      
-      # Install shell completions
-      bash_completion.install "completions/gelf.bash" => "gelf"
-      zsh_completion.install "completions/gelf.zsh" => "_gelf"
-      fish_completion.install "completions/gelf.fish"
-    test: |
-      system "#{bin}/gelf --help"
+    completions:
+      bash: completions/gelf.bash
+      zsh: completions/gelf.zsh
+      fish: completions/gelf.fish
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -49,7 +44,7 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     files:
       - completions/*
 
@@ -57,7 +52,7 @@ checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
