@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/EkeMinusYou/gelf/internal/config"
 
@@ -16,6 +17,28 @@ type VertexAIClient struct {
 }
 
 func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient, error) {
+	// Check for GELF_CREDENTIALS first, then fall back to GOOGLE_APPLICATION_CREDENTIALS
+	credentialsPath := os.Getenv("GELF_CREDENTIALS")
+	if credentialsPath == "" {
+		credentialsPath = os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	}
+	
+	// If we have a credentials path, set it as GOOGLE_APPLICATION_CREDENTIALS
+	// since genai.NewClient uses this environment variable internally
+	if credentialsPath != "" {
+		originalCreds := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath)
+		
+		// Restore original credentials after client creation
+		defer func() {
+			if originalCreds != "" {
+				os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", originalCreds)
+			} else {
+				os.Unsetenv("GOOGLE_APPLICATION_CREDENTIALS")
+			}
+		}()
+	}
+	
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		Project:  cfg.ProjectID,
 		Location: cfg.Location,

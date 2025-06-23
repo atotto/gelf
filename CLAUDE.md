@@ -121,6 +121,7 @@ devcontainerの設定：
 - `GOPRIVATE=github.com/groove-x`
 
 アプリケーションの環境変数：
+- `GELF_CREDENTIALS` - サービスアカウントキーへのパス（GOOGLE_APPLICATION_CREDENTIALSより優先）
 - `GOOGLE_APPLICATION_CREDENTIALS` - サービスアカウントキーへのパス
 - `VERTEXAI_PROJECT` - Google CloudプロジェクトID
 - `VERTEXAI_LOCATION` - Vertex AIのロケーション (デフォルト: us-central1)

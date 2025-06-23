@@ -70,7 +70,10 @@ gelf:
 You can also configure using environment variables:
 
 ```bash
-# Path to your service account key file
+# Path to your service account key file (gelf-specific, takes priority)
+export GELF_CREDENTIALS="/path/to/your/service-account-key.json"
+
+# Alternative: Standard Google Cloud credentials (used if GELF_CREDENTIALS is not set)
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account-key.json"
 
 # Google Cloud project ID
@@ -87,7 +90,7 @@ export VERTEXAI_LOCATION="us-central1"
 1. Create a service account in Google Cloud Console
 2. Grant the "Vertex AI User" role
 3. Download the JSON key file
-4. Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to the file path
+4. Set the `GELF_CREDENTIALS` environment variable to the file path (recommended) or use `GOOGLE_APPLICATION_CREDENTIALS`
 
 ## 🚀 Usage
 
@@ -240,9 +243,12 @@ gelf:
 
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key file | - | ✅ |
+| `GELF_CREDENTIALS` | Path to service account key file (gelf-specific, takes priority) | - | ✅* |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account key file (fallback) | - | ✅* |
 | `VERTEXAI_PROJECT` or `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID | - | ✅ |
 | `VERTEXAI_LOCATION` | Vertex AI location | `us-central1` | ❌ |
+
+*Either `GELF_CREDENTIALS` or `GOOGLE_APPLICATION_CREDENTIALS` is required. If both are set, `GELF_CREDENTIALS` takes priority.
 
 **Note**: Model configuration (flash_model and pro_model) is only available through configuration files.
 
