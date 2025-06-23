@@ -328,8 +328,7 @@ var (
 		Margin(1, 0, 0, 0)
 	
 	diffStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("7")).    // ライトグレー
-		Margin(1, 0, 0, 0)
+		Foreground(lipgloss.Color("7"))     // ライトグレー
 	
 	fileStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("5")).    // マゼンタ
