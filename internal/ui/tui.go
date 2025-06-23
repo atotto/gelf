@@ -506,10 +506,10 @@ func (m *reviewModel) printFileReview(fileReview ai.FileReview) {
 		
 		if hasGeneralComments && fileReview.DiffText != "" {
 			fmt.Println()
-			fmt.Printf("%s\n", diffStyle.Render("📋 Related changes:"))
+			fmt.Printf("  %s\n", diffStyle.Render("📋 Related changes:"))
 			diffLines := m.getRelevantDiffSections(fileReview.DiffText, fileReview.Comments)
 			for _, line := range diffLines {
-				fmt.Println("  " + line)
+				fmt.Println("    " + line)
 			}
 		}
 	} else {
@@ -787,7 +787,7 @@ func (m *reviewModel) printComment(comment ai.ReviewComment) {
 		lineInfo = fmt.Sprintf(" (Line %d)", comment.LineNo)
 	}
 	
-	// Simple format like Claude Code
+	// Simple format like Claude Code with consistent alignment
 	fmt.Printf("  %s%s\n", 
 		style.Render(prefix + lineInfo + ":"), 
 		"")
