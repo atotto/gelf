@@ -275,6 +275,7 @@ func (m *model) Run() error {
 type reviewModel struct {
 	aiClient *ai.VertexAIClient
 	diff     string
+	diffSummary git.DiffSummary
 	review   string
 	err      error
 	state    reviewState
@@ -376,14 +377,17 @@ func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *revie
 		}
 	}
 	
+	diffSummary := git.ParseDiffSummary(diff)
+	
 	return &reviewModel{
-		aiClient: aiClient,
-		diff:     diff,
-		state:    reviewStateLoading,
-		spinner:  s,
-		sub:      make(chan msgReviewChunk, 100),
-		noStyle:  noStyle,
-		renderer: renderer,
+		aiClient:    aiClient,
+		diff:        diff,
+		diffSummary: diffSummary,
+		state:       reviewStateLoading,
+		spinner:     s,
+		sub:         make(chan msgReviewChunk, 100),
+		noStyle:     noStyle,
+		renderer:    renderer,
 	}
 }
 
@@ -473,24 +477,37 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *reviewModel) View() string {
 	switch m.state {
 	case reviewStateLoading:
-		return fmt.Sprintf("%s %s", 
+		loadingText := fmt.Sprintf("%s %s", 
 			m.spinner.View(), 
 			loadingStyle.Render("Analyzing code for review..."))
+		
+		diffSummary := m.formatReviewDiffSummary()
+		if diffSummary != "" {
+			return fmt.Sprintf("%s\n\n%s", diffSummary, loadingText)
+		}
+		return loadingText
 
 	case reviewStateStreaming:
 		// Display streaming content with styling if available
+		var content string
 		if m.noStyle || m.renderer == nil {
-			return m.review
+			content = m.review
+		} else {
+			// Try to render the current content with glamour
+			styled, err := m.renderer.Render(m.review)
+			if err != nil {
+				// Fallback to plain text if rendering fails
+				content = m.review
+			} else {
+				content = styled
+			}
 		}
 		
-		// Try to render the current content with glamour
-		styled, err := m.renderer.Render(m.review)
-		if err != nil {
-			// Fallback to plain text if rendering fails
-			return m.review
+		diffSummary := m.formatReviewDiffSummary()
+		if diffSummary != "" {
+			return fmt.Sprintf("%s\n\n%s", diffSummary, content)
 		}
-		
-		return styled
+		return content
 
 	case reviewStateDisplay:
 		return "" // Review will be printed after TUI exits
@@ -542,7 +559,7 @@ func (m *reviewModel) waitForActivity(sub chan msgReviewChunk) tea.Cmd {
 }
 
 func (m *reviewModel) Run() (string, error) {
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m)
 	_, err := p.Run()
 	
 	if m.err != nil {
@@ -605,8 +622,14 @@ func (m *reviewModel) scrollToBottom() {
 }
 
 func (m *reviewModel) getViewportHeight() int {
-	// Reserve space for status line
-	return max(1, m.windowHeight-2)
+	// Without alt screen, use a reasonable max height instead of full terminal
+	maxHeight := 20
+	if m.windowHeight > 0 && m.windowHeight < maxHeight {
+		// Use available height minus space for status line
+		return max(1, m.windowHeight-2)
+	}
+	// Use reasonable default height
+	return maxHeight - 2
 }
 
 func (m *reviewModel) renderScrollableView() string {
@@ -614,9 +637,21 @@ func (m *reviewModel) renderScrollableView() string {
 		return "No content to display"
 	}
 	
-	viewportHeight := m.getViewportHeight()
+	// Get diff summary
+	diffSummary := m.formatReviewDiffSummary()
+	
+	// Calculate viewport height (this already considers reasonable limits)
+	baseViewportHeight := m.getViewportHeight()
+	
+	// Adjust for diff summary if present
+	if diffSummary != "" {
+		diffLines := len(strings.Split(diffSummary, "\n"))
+		// Reduce viewport height to accommodate diff summary
+		baseViewportHeight = max(1, baseViewportHeight-diffLines-1)
+	}
+	
 	start := m.scrollOffset
-	end := min(start+viewportHeight, len(m.reviewLines))
+	end := min(start+baseViewportHeight, len(m.reviewLines))
 	
 	visibleLines := m.reviewLines[start:end]
 	content := strings.Join(visibleLines, "\n")
@@ -624,7 +659,17 @@ func (m *reviewModel) renderScrollableView() string {
 	// Add status line
 	statusLine := m.renderStatusLine()
 	
-	return content + "\n" + statusLine
+	// Combine all parts
+	var result strings.Builder
+	if diffSummary != "" {
+		result.WriteString(diffSummary)
+		result.WriteString("\n\n")
+	}
+	result.WriteString(content)
+	result.WriteString("\n")
+	result.WriteString(statusLine)
+	
+	return result.String()
 }
 
 func (m *reviewModel) renderStatusLine() string {
@@ -666,5 +711,34 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func (m *reviewModel) formatReviewDiffSummary() string {
+	if len(m.diffSummary.Files) == 0 {
+		return ""
+	}
+	
+	var parts []string
+	parts = append(parts, diffStyle.Render("📄 Changed Files:"))
+	
+	for _, file := range m.diffSummary.Files {
+		fileName := fileStyle.Render(file.Name)
+		
+		var changes []string
+		if file.AddedLines > 0 {
+			changes = append(changes, addedStyle.Render(fmt.Sprintf("+%d", file.AddedLines)))
+		}
+		if file.DeletedLines > 0 {
+			changes = append(changes, deletedStyle.Render(fmt.Sprintf("-%d", file.DeletedLines)))
+		}
+		
+		if len(changes) > 0 {
+			parts = append(parts, fmt.Sprintf(" • %s (%s)", fileName, strings.Join(changes, ", ")))
+		} else {
+			parts = append(parts, fmt.Sprintf(" • %s", fileName))
+		}
+	}
+	
+	return strings.Join(parts, "\n")
 }
 
