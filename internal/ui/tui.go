@@ -486,14 +486,14 @@ func (m *reviewModel) printFileReview(fileReview ai.FileReview) {
 				fmt.Println() // Space between comment blocks
 			}
 			
-			// Print comment first
-			m.printComment(comment)
-			
-			// Print relevant code context for this specific comment
+			// Print relevant code context for this specific comment first
 			if fileReview.DiffText != "" && comment.LineNo > 0 {
-				fmt.Println()
 				m.printCodeContext(fileReview.DiffText, comment.LineNo)
+				fmt.Println()
 			}
+			
+			// Print comment after code context
+			m.printComment(comment)
 		}
 		
 		// If there are comments without line numbers, show general diff
