@@ -283,11 +283,6 @@ type reviewModel struct {
 	sub      chan msgReviewChunk
 	noStyle  bool
 	renderer *glamour.TermRenderer
-	// Scrollable viewport
-	scrollOffset int
-	windowHeight int
-	windowWidth  int
-	reviewLines  []string
 }
 
 type reviewState int
@@ -297,7 +292,6 @@ const (
 	reviewStateStreaming
 	reviewStateDisplay
 	reviewStateError
-	reviewStateScrolling
 )
 
 type msgReviewGenerated struct {
@@ -399,11 +393,6 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.windowHeight = msg.Height
-		m.windowWidth = msg.Width
-		return m, nil
-		
 	case tea.KeyMsg:
 		switch m.state {
 		case reviewStateLoading, reviewStateStreaming:
@@ -413,27 +402,6 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case reviewStateDisplay, reviewStateError:
 			return m, tea.Quit
-		case reviewStateScrolling:
-			switch msg.String() {
-			case "q", "ctrl+c", "esc":
-				return m, tea.Quit
-			case "j", "down":
-				m.scrollDown()
-			case "k", "up":
-				m.scrollUp()
-			case "d", "ctrl+d":
-				m.scrollDownPage()
-			case "u", "ctrl+u":
-				m.scrollUpPage()
-			case "g":
-				m.scrollToTop()
-			case "G":
-				m.scrollToBottom()
-			case "home":
-				m.scrollToTop()
-			case "end":
-				m.scrollToBottom()
-			}
 		}
 
 	case msgReviewChunk:
@@ -448,8 +416,7 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 			m.state = reviewStateError
 		} else {
-			m.prepareForScrolling()
-			m.state = reviewStateScrolling
+			m.state = reviewStateDisplay
 		}
 		return m, nil
 
@@ -459,8 +426,7 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = reviewStateError
 		} else {
 			m.review = msg.review
-			m.prepareForScrolling()
-			m.state = reviewStateScrolling
+			m.state = reviewStateDisplay
 		}
 		return m, nil
 	}
@@ -511,9 +477,6 @@ func (m *reviewModel) View() string {
 
 	case reviewStateDisplay:
 		return "" // Review will be printed after TUI exits
-
-	case reviewStateScrolling:
-		return m.renderScrollableView()
 
 	case reviewStateError:
 		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
@@ -566,152 +529,32 @@ func (m *reviewModel) Run() (string, error) {
 		return "", m.err
 	}
 	
-	return m.review, err
-}
-
-// Scrolling helper methods
-func (m *reviewModel) prepareForScrolling() {
-	// Render content and split into lines
-	var content string
-	if m.noStyle || m.renderer == nil {
-		content = m.review
-	} else {
-		styled, err := m.renderer.Render(m.review)
-		if err != nil {
+	// Print the review after TUI exits
+	if m.review != "" {
+		var content string
+		if m.noStyle || m.renderer == nil {
 			content = m.review
 		} else {
-			content = styled
+			styled, renderErr := m.renderer.Render(m.review)
+			if renderErr != nil {
+				content = m.review
+			} else {
+				content = styled
+			}
+		}
+		
+		diffSummary := m.formatReviewDiffSummary()
+		if diffSummary != "" {
+			fmt.Printf("%s\n\n%s\n", diffSummary, content)
+		} else {
+			fmt.Print(content + "\n")
 		}
 	}
 	
-	m.reviewLines = strings.Split(content, "\n")
-	m.scrollOffset = 0
+	return m.review, err
 }
 
-func (m *reviewModel) scrollDown() {
-	if m.scrollOffset < len(m.reviewLines)-m.getViewportHeight() {
-		m.scrollOffset++
-	}
-}
 
-func (m *reviewModel) scrollUp() {
-	if m.scrollOffset > 0 {
-		m.scrollOffset--
-	}
-}
-
-func (m *reviewModel) scrollDownPage() {
-	pageSize := m.getViewportHeight() / 2
-	m.scrollOffset = min(m.scrollOffset+pageSize, len(m.reviewLines)-m.getViewportHeight())
-	if m.scrollOffset < 0 {
-		m.scrollOffset = 0
-	}
-}
-
-func (m *reviewModel) scrollUpPage() {
-	pageSize := m.getViewportHeight() / 2
-	m.scrollOffset = max(0, m.scrollOffset-pageSize)
-}
-
-func (m *reviewModel) scrollToTop() {
-	m.scrollOffset = 0
-}
-
-func (m *reviewModel) scrollToBottom() {
-	m.scrollOffset = max(0, len(m.reviewLines)-m.getViewportHeight())
-}
-
-func (m *reviewModel) getViewportHeight() int {
-	// Without alt screen, use a reasonable max height instead of full terminal
-	maxHeight := 20
-	if m.windowHeight > 0 && m.windowHeight < maxHeight {
-		// Use available height minus space for status line
-		return max(1, m.windowHeight-2)
-	}
-	// Use reasonable default height
-	return maxHeight - 2
-}
-
-func (m *reviewModel) renderScrollableView() string {
-	if len(m.reviewLines) == 0 {
-		return "No content to display"
-	}
-	
-	// Get diff summary
-	diffSummary := m.formatReviewDiffSummary()
-	
-	// Calculate viewport height (this already considers reasonable limits)
-	baseViewportHeight := m.getViewportHeight()
-	
-	// Adjust for diff summary if present
-	if diffSummary != "" {
-		diffLines := len(strings.Split(diffSummary, "\n"))
-		// Reduce viewport height to accommodate diff summary
-		baseViewportHeight = max(1, baseViewportHeight-diffLines-1)
-	}
-	
-	start := m.scrollOffset
-	end := min(start+baseViewportHeight, len(m.reviewLines))
-	
-	visibleLines := m.reviewLines[start:end]
-	content := strings.Join(visibleLines, "\n")
-	
-	// Add status line
-	statusLine := m.renderStatusLine()
-	
-	// Combine all parts
-	var result strings.Builder
-	if diffSummary != "" {
-		result.WriteString(diffSummary)
-		result.WriteString("\n\n")
-	}
-	result.WriteString(content)
-	result.WriteString("\n")
-	result.WriteString(statusLine)
-	
-	return result.String()
-}
-
-func (m *reviewModel) renderStatusLine() string {
-	if len(m.reviewLines) == 0 {
-		return ""
-	}
-	
-	currentLine := m.scrollOffset + 1
-	totalLines := len(m.reviewLines)
-	percentage := int(float64(m.scrollOffset) / float64(max(1, totalLines-m.getViewportHeight())) * 100)
-	
-	if m.scrollOffset >= totalLines-m.getViewportHeight() {
-		percentage = 100
-	}
-	
-	status := fmt.Sprintf("Line %d/%d (%d%%) | j/k:scroll d/u:page g/G:top/bottom q:quit", 
-		currentLine, totalLines, percentage)
-	
-	// Style the status line
-	statusStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("8")).  // Gray
-		Background(lipgloss.Color("0")).  // Black
-		Bold(true).
-		Width(m.windowWidth).
-		Align(lipgloss.Left)
-	
-	return statusStyle.Render(status)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
 
 func (m *reviewModel) formatReviewDiffSummary() string {
 	if len(m.diffSummary.Files) == 0 {

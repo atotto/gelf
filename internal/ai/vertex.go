@@ -116,46 +116,37 @@ Respond with only the commit message, no additional text or formatting.`, diff)
 }
 
 func (v *VertexAIClient) ReviewCode(ctx context.Context, diff string) (string, error) {
-	prompt := fmt.Sprintf(`Analyze the following git diff and provide a comprehensive code review.
-
-REVIEW ANALYSIS GUIDE:
-1. Look at file paths and understand the affected codebase areas
-2. Examine +/- lines to understand changes (additions, deletions, modifications)
-3. Pay attention to function names, variable names, and code structure changes
-4. Consider the context lines (prefixed with space) to understand surrounding code
-5. Identify potential issues: bugs, security concerns, performance problems, code quality
-
-REVIEW FOCUS AREAS:
-1. Code correctness and potential bugs
-2. Security vulnerabilities and best practices
-3. Performance implications
-4. Code style and maintainability
-5. Error handling and edge cases
-6. Test coverage considerations
-7. Documentation needs
+	prompt := fmt.Sprintf(`Analyze the following git diff and provide a concise code review.
 
 REVIEW FORMAT:
-Provide a structured review in Markdown format with:
-- Summary of changes
-- Positive aspects (what's done well)  
-- Issues and concerns (if any)
-- Suggestions for improvement
-- Overall assessment
+1. **Overall Summary**: Brief overview of changes (1-2 sentences)
+2. **Specific Comments**: Use these prefixes for each comment:
+   - **must**: Critical issues that must be fixed
+   - **want**: Important suggestions for improvement
+   - **nits**: Minor style/formatting issues
+   - **fyi**: Informational notes
+   - **imo**: Opinion-based suggestions
 
-Use clear, constructive language. Be specific about line numbers when referencing issues.
-If the code looks good, acknowledge that and provide any minor suggestions.
+GUIDELINES:
+- Be concise and actionable
+- Focus on the most important issues
+- Use specific line references when possible
+- If no issues found, simply state "No significant issues found"
+- Limit to 5-10 comments maximum
 
-Use proper Markdown formatting including:
-- Headers (##, ###) for sections
-- Code blocks (triple backticks) for code snippets
-- Lists (-, *) for bullet points
-- **Bold** for emphasis
-- Backticks for inline code/variable/function names
+EXAMPLE FORMAT:
+## Overall Summary
+Brief description of what was changed.
+
+## Specific Comments
+- **must**: Fix potential null pointer dereference in function_name
+- **want**: Consider adding error handling for edge case
+- **nits**: Inconsistent spacing in line 42
 
 Git diff:
 %s
 
-Provide a detailed code review in Markdown format:`, diff)
+Provide a concise code review:`, diff)
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{
@@ -185,46 +176,37 @@ Provide a detailed code review in Markdown format:`, diff)
 }
 
 func (v *VertexAIClient) ReviewCodeStreaming(ctx context.Context, diff string, callback func(string)) error {
-	prompt := fmt.Sprintf(`Analyze the following git diff and provide a comprehensive code review.
-
-REVIEW ANALYSIS GUIDE:
-1. Look at file paths and understand the affected codebase areas
-2. Examine +/- lines to understand changes (additions, deletions, modifications)
-3. Pay attention to function names, variable names, and code structure changes
-4. Consider the context lines (prefixed with space) to understand surrounding code
-5. Identify potential issues: bugs, security concerns, performance problems, code quality
-
-REVIEW FOCUS AREAS:
-1. Code correctness and potential bugs
-2. Security vulnerabilities and best practices
-3. Performance implications
-4. Code style and maintainability
-5. Error handling and edge cases
-6. Test coverage considerations
-7. Documentation needs
+	prompt := fmt.Sprintf(`Analyze the following git diff and provide a concise code review.
 
 REVIEW FORMAT:
-Provide a structured review in Markdown format with:
-- Summary of changes
-- Positive aspects (what's done well)  
-- Issues and concerns (if any)
-- Suggestions for improvement
-- Overall assessment
+1. **Overall Summary**: Brief overview of changes (1-2 sentences)
+2. **Specific Comments**: Use these prefixes for each comment:
+   - **must**: Critical issues that must be fixed
+   - **want**: Important suggestions for improvement
+   - **nits**: Minor style/formatting issues
+   - **fyi**: Informational notes
+   - **imo**: Opinion-based suggestions
 
-Use clear, constructive language. Be specific about line numbers when referencing issues.
-If the code looks good, acknowledge that and provide any minor suggestions.
+GUIDELINES:
+- Be concise and actionable
+- Focus on the most important issues
+- Use specific line references when possible
+- If no issues found, simply state "No significant issues found"
+- Limit to 5-10 comments maximum
 
-Use proper Markdown formatting including:
-- Headers (##, ###) for sections
-- Code blocks (triple backticks) for code snippets
-- Lists (-, *) for bullet points
-- **Bold** for emphasis
-- Backticks for inline code/variable/function names
+EXAMPLE FORMAT:
+## Overall Summary
+Brief description of what was changed.
+
+## Specific Comments
+- **must**: Fix potential null pointer dereference in function_name
+- **want**: Consider adding error handling for edge case
+- **nits**: Inconsistent spacing in line 42
 
 Git diff:
 %s
 
-Provide a detailed code review in Markdown format:`, diff)
+Provide a concise code review:`, diff)
 
 	iter := v.client.Models.GenerateContentStream(ctx, v.flashModel,
 		[]*genai.Content{
