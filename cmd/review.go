@@ -9,7 +9,6 @@ import (
 	"github.com/EkeMinusYou/gelf/internal/git"
 	"github.com/EkeMinusYou/gelf/internal/ui"
 
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
@@ -78,36 +77,12 @@ func runReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create AI client: %w", err)
 	}
 
-	// Use TUI for loading experience
+	// Use TUI for loading and display experience with scrolling
 	reviewTUI := ui.NewReviewTUI(aiClient, diff, noStyle)
-	review, err := reviewTUI.Run()
+	_, err = reviewTUI.Run()
 	if err != nil {
 		return fmt.Errorf("failed to generate code review: %w", err)
 	}
 
-	// Style and display the review
-	if noStyle {
-		fmt.Print(review + "\n")
-	} else {
-		// Create a glamour renderer with auto-detected style
-		renderer, err := glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
-			glamour.WithWordWrap(80),
-		)
-		if err != nil {
-			// Fallback to plain text if glamour fails
-			fmt.Print(review + "\n")
-			return nil
-		}
-
-		styled, err := renderer.Render(review)
-		if err != nil {
-			// Fallback to plain text if rendering fails
-			fmt.Print(review + "\n")
-			return nil
-		}
-
-		fmt.Print(styled)
-	}
 	return nil
 }

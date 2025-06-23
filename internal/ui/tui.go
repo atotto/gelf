@@ -282,6 +282,11 @@ type reviewModel struct {
 	sub      chan msgReviewChunk
 	noStyle  bool
 	renderer *glamour.TermRenderer
+	// Scrollable viewport
+	scrollOffset int
+	windowHeight int
+	windowWidth  int
+	reviewLines  []string
 }
 
 type reviewState int
@@ -291,6 +296,7 @@ const (
 	reviewStateStreaming
 	reviewStateDisplay
 	reviewStateError
+	reviewStateScrolling
 )
 
 type msgReviewGenerated struct {
@@ -389,6 +395,11 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowHeight = msg.Height
+		m.windowWidth = msg.Width
+		return m, nil
+		
 	case tea.KeyMsg:
 		switch m.state {
 		case reviewStateLoading, reviewStateStreaming:
@@ -398,6 +409,27 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case reviewStateDisplay, reviewStateError:
 			return m, tea.Quit
+		case reviewStateScrolling:
+			switch msg.String() {
+			case "q", "ctrl+c", "esc":
+				return m, tea.Quit
+			case "j", "down":
+				m.scrollDown()
+			case "k", "up":
+				m.scrollUp()
+			case "d", "ctrl+d":
+				m.scrollDownPage()
+			case "u", "ctrl+u":
+				m.scrollUpPage()
+			case "g":
+				m.scrollToTop()
+			case "G":
+				m.scrollToBottom()
+			case "home":
+				m.scrollToTop()
+			case "end":
+				m.scrollToBottom()
+			}
 		}
 
 	case msgReviewChunk:
@@ -412,9 +444,10 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.err
 			m.state = reviewStateError
 		} else {
-			m.state = reviewStateDisplay
+			m.prepareForScrolling()
+			m.state = reviewStateScrolling
 		}
-		return m, tea.Quit
+		return m, nil
 
 	case msgReviewGenerated:
 		if msg.err != nil {
@@ -422,9 +455,10 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = reviewStateError
 		} else {
 			m.review = msg.review
-			m.state = reviewStateDisplay
+			m.prepareForScrolling()
+			m.state = reviewStateScrolling
 		}
-		return m, tea.Quit
+		return m, nil
 	}
 
 	// Update spinner
@@ -460,6 +494,9 @@ func (m *reviewModel) View() string {
 
 	case reviewStateDisplay:
 		return "" // Review will be printed after TUI exits
+
+	case reviewStateScrolling:
+		return m.renderScrollableView()
 
 	case reviewStateError:
 		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
@@ -505,7 +542,7 @@ func (m *reviewModel) waitForActivity(sub chan msgReviewChunk) tea.Cmd {
 }
 
 func (m *reviewModel) Run() (string, error) {
-	p := tea.NewProgram(m)
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	_, err := p.Run()
 	
 	if m.err != nil {
@@ -513,5 +550,121 @@ func (m *reviewModel) Run() (string, error) {
 	}
 	
 	return m.review, err
+}
+
+// Scrolling helper methods
+func (m *reviewModel) prepareForScrolling() {
+	// Render content and split into lines
+	var content string
+	if m.noStyle || m.renderer == nil {
+		content = m.review
+	} else {
+		styled, err := m.renderer.Render(m.review)
+		if err != nil {
+			content = m.review
+		} else {
+			content = styled
+		}
+	}
+	
+	m.reviewLines = strings.Split(content, "\n")
+	m.scrollOffset = 0
+}
+
+func (m *reviewModel) scrollDown() {
+	if m.scrollOffset < len(m.reviewLines)-m.getViewportHeight() {
+		m.scrollOffset++
+	}
+}
+
+func (m *reviewModel) scrollUp() {
+	if m.scrollOffset > 0 {
+		m.scrollOffset--
+	}
+}
+
+func (m *reviewModel) scrollDownPage() {
+	pageSize := m.getViewportHeight() / 2
+	m.scrollOffset = min(m.scrollOffset+pageSize, len(m.reviewLines)-m.getViewportHeight())
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
+	}
+}
+
+func (m *reviewModel) scrollUpPage() {
+	pageSize := m.getViewportHeight() / 2
+	m.scrollOffset = max(0, m.scrollOffset-pageSize)
+}
+
+func (m *reviewModel) scrollToTop() {
+	m.scrollOffset = 0
+}
+
+func (m *reviewModel) scrollToBottom() {
+	m.scrollOffset = max(0, len(m.reviewLines)-m.getViewportHeight())
+}
+
+func (m *reviewModel) getViewportHeight() int {
+	// Reserve space for status line
+	return max(1, m.windowHeight-2)
+}
+
+func (m *reviewModel) renderScrollableView() string {
+	if len(m.reviewLines) == 0 {
+		return "No content to display"
+	}
+	
+	viewportHeight := m.getViewportHeight()
+	start := m.scrollOffset
+	end := min(start+viewportHeight, len(m.reviewLines))
+	
+	visibleLines := m.reviewLines[start:end]
+	content := strings.Join(visibleLines, "\n")
+	
+	// Add status line
+	statusLine := m.renderStatusLine()
+	
+	return content + "\n" + statusLine
+}
+
+func (m *reviewModel) renderStatusLine() string {
+	if len(m.reviewLines) == 0 {
+		return ""
+	}
+	
+	currentLine := m.scrollOffset + 1
+	totalLines := len(m.reviewLines)
+	percentage := int(float64(m.scrollOffset) / float64(max(1, totalLines-m.getViewportHeight())) * 100)
+	
+	if m.scrollOffset >= totalLines-m.getViewportHeight() {
+		percentage = 100
+	}
+	
+	status := fmt.Sprintf("Line %d/%d (%d%%) | j/k:scroll d/u:page g/G:top/bottom q:quit", 
+		currentLine, totalLines, percentage)
+	
+	// Style the status line
+	statusStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).  // Gray
+		Background(lipgloss.Color("0")).  // Black
+		Bold(true).
+		Width(m.windowWidth).
+		Align(lipgloss.Left)
+	
+	return statusStyle.Render(status)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
