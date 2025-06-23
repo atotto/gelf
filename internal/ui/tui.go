@@ -29,6 +29,7 @@ const (
 type model struct {
 	aiClient        *ai.VertexAIClient
 	diff            string
+	diffSummary     git.DiffSummary
 	commitMessage   string
 	originalMessage string
 	err             error
@@ -61,12 +62,15 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	ti.CharLimit = 200
 	ti.Width = 60
 	
+	diffSummary := git.ParseDiffSummary(diff)
+	
 	return &model{
-		aiClient:  aiClient,
-		diff:     diff,
-		state:    stateLoading,
-		spinner:  s,
-		textInput: ti,
+		aiClient:    aiClient,
+		diff:        diff,
+		diffSummary: diffSummary,
+		state:       stateLoading,
+		spinner:     s,
+		textInput:   ti,
 	}
 }
 
@@ -152,22 +156,36 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) View() string {
 	switch m.state {
 	case stateLoading:
-		return fmt.Sprintf("%s %s", 
+		loadingText := fmt.Sprintf("%s %s", 
 			m.spinner.View(), 
 			loadingStyle.Render("Generating commit message..."))
+		
+		diffSummary := m.formatDiffSummary()
+		if diffSummary != "" {
+			return fmt.Sprintf("%s\n\n%s", diffSummary, loadingText)
+		}
+		return loadingText
 
 	case stateConfirm:
+		diffSummary := m.formatDiffSummary()
 		header := titleStyle.Render("📝 Generated Commit Message:")
 		message := messageStyle.Render(m.commitMessage)
 		prompt := promptStyle.Render("Commit this message? (y)es / (e)dit / (n)o")
 		
+		if diffSummary != "" {
+			return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", diffSummary, header, message, prompt)
+		}
 		return fmt.Sprintf("%s\n\n%s\n\n%s", header, message, prompt)
 
 	case stateEditing:
+		diffSummary := m.formatDiffSummary()
 		header := titleStyle.Render("✏️  Edit Commit Message:")
 		inputView := m.textInput.View()
 		prompt := editPromptStyle.Render("Press Enter to confirm, Esc to cancel")
 		
+		if diffSummary != "" {
+			return fmt.Sprintf("%s\n\n%s\n\n%s\n\n%s", diffSummary, header, inputView, prompt)
+		}
 		return fmt.Sprintf("%s\n\n%s\n\n%s", header, inputView, prompt)
 
 	case stateCommitting:
@@ -202,6 +220,35 @@ func (m *model) commitChanges() tea.Cmd {
 		err := git.CommitChanges(m.commitMessage)
 		return msgCommitDone{err: err}
 	})
+}
+
+func (m *model) formatDiffSummary() string {
+	if len(m.diffSummary.Files) == 0 {
+		return ""
+	}
+	
+	var parts []string
+	parts = append(parts, diffStyle.Render("📄 Changed Files:"))
+	
+	for _, file := range m.diffSummary.Files {
+		fileName := fileStyle.Render(file.Name)
+		
+		var changes []string
+		if file.AddedLines > 0 {
+			changes = append(changes, addedStyle.Render(fmt.Sprintf("+%d", file.AddedLines)))
+		}
+		if file.DeletedLines > 0 {
+			changes = append(changes, deletedStyle.Render(fmt.Sprintf("-%d", file.DeletedLines)))
+		}
+		
+		if len(changes) > 0 {
+			parts = append(parts, fmt.Sprintf("  %s (%s)", fileName, strings.Join(changes, ", ")))
+		} else {
+			parts = append(parts, fmt.Sprintf("  %s", fileName))
+		}
+	}
+	
+	return strings.Join(parts, "\n")
 }
 
 
@@ -288,6 +335,20 @@ var (
 		Foreground(lipgloss.Color("3")).    // イエロー
 		Bold(true).
 		Margin(1, 0, 0, 0)
+	
+	diffStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("7")).    // ライトグレー
+		Margin(1, 0, 0, 0)
+	
+	fileStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("5")).    // マゼンタ
+		Bold(true)
+	
+	addedStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("2"))     // グリーン
+	
+	deletedStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("1"))     // レッド
 
 )
 

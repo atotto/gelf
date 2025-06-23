@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/EkeMinusYou/gelf/internal/ai"
 	"github.com/EkeMinusYou/gelf/internal/config"
@@ -71,7 +72,28 @@ func runCommit(cmd *cobra.Command, args []string) error {
 
 	if dryRun {
 		if !quiet {
-			fmt.Fprintf(cmd.ErrOrStderr(), "=== Staged Changes ===\n%s\n\n", diff)
+			diffSummary := git.ParseDiffSummary(diff)
+			if len(diffSummary.Files) > 0 {
+				fmt.Fprintf(cmd.ErrOrStderr(), "=== Changed Files ===\n")
+				for _, file := range diffSummary.Files {
+					var changes []string
+					if file.AddedLines > 0 {
+						changes = append(changes, fmt.Sprintf("+%d", file.AddedLines))
+					}
+					if file.DeletedLines > 0 {
+						changes = append(changes, fmt.Sprintf("-%d", file.DeletedLines))
+					}
+					
+					if len(changes) > 0 {
+						fmt.Fprintf(cmd.ErrOrStderr(), "%s (%s)\n", file.Name, strings.Join(changes, ", "))
+					} else {
+						fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", file.Name)
+					}
+				}
+				fmt.Fprintf(cmd.ErrOrStderr(), "\n=== Full Diff ===\n%s\n\n", diff)
+			} else {
+				fmt.Fprintf(cmd.ErrOrStderr(), "=== Staged Changes ===\n%s\n\n", diff)
+			}
 		}
 
 		message, err := aiClient.GenerateCommitMessage(ctx, diff)
