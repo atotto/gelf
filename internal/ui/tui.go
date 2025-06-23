@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -276,42 +275,24 @@ type reviewModel struct {
 	aiClient *ai.VertexAIClient
 	diff     string
 	diffSummary git.DiffSummary
-	review   string
 	structuredReview *ai.StructuredReview
 	err      error
 	state    reviewState
 	spinner  spinner.Model
-	sub      chan msgReviewChunk
 	noStyle  bool
-	renderer *glamour.TermRenderer
-	useStructured bool
 }
 
 type reviewState int
 
 const (
 	reviewStateLoading reviewState = iota
-	reviewStateStreaming
 	reviewStateDisplay
 	reviewStateError
 )
 
-type msgReviewGenerated struct {
-	review string
-	err    error
-}
-
 type msgStructuredReviewGenerated struct {
 	review *ai.StructuredReview
 	err    error
-}
-
-type msgReviewChunk struct {
-	chunk string
-}
-
-type msgReviewComplete struct {
-	err error
 }
 
 // リッチなカラースタイル（枠なし）
@@ -367,42 +348,20 @@ func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *revie
 	s.Spinner = spinner.Dot
 	s.Style = loadingStyle
 	
-	var renderer *glamour.TermRenderer
-	if !noStyle {
-		r, err := glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
-			glamour.WithWordWrap(80),
-		)
-		if err == nil {
-			renderer = r
-		}
-	}
-	
 	diffSummary := git.ParseDiffSummary(diff)
 	
 	return &reviewModel{
-		aiClient:      aiClient,
-		diff:          diff,
-		diffSummary:   diffSummary,
-		state:         reviewStateLoading,
-		spinner:       s,
-		sub:           make(chan msgReviewChunk, 100),
-		noStyle:       noStyle,
-		renderer:      renderer,
-		useStructured: true, // Use structured review by default
+		aiClient:    aiClient,
+		diff:        diff,
+		diffSummary: diffSummary,
+		state:       reviewStateLoading,
+		spinner:     s,
+		noStyle:     noStyle,
 	}
-}
-
-// SetLegacyMode enables legacy streaming review mode
-func (m *reviewModel) SetLegacyMode(legacy bool) {
-	m.useStructured = !legacy
 }
 
 func (m *reviewModel) Init() tea.Cmd {
-	if m.useStructured {
-		return tea.Batch(m.spinner.Tick, m.generateStructuredReview())
-	}
-	return tea.Batch(m.spinner.Tick, m.generateReviewStreaming(), m.waitForActivity(m.sub))
+	return tea.Batch(m.spinner.Tick, m.generateStructuredReview())
 }
 
 func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -411,7 +370,7 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch m.state {
-		case reviewStateLoading, reviewStateStreaming:
+		case reviewStateLoading:
 			switch msg.String() {
 			case "q", "ctrl+c":
 				return m, tea.Quit
@@ -419,32 +378,6 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case reviewStateDisplay, reviewStateError:
 			return m, tea.Quit
 		}
-
-	case msgReviewChunk:
-		if m.state == reviewStateLoading {
-			m.state = reviewStateStreaming
-		}
-		m.review += msg.chunk
-		return m, m.waitForActivity(m.sub)
-
-	case msgReviewComplete:
-		if msg.err != nil {
-			m.err = msg.err
-			m.state = reviewStateError
-		} else {
-			m.state = reviewStateDisplay
-		}
-		return m, tea.Quit
-
-	case msgReviewGenerated:
-		if msg.err != nil {
-			m.err = msg.err
-			m.state = reviewStateError
-		} else {
-			m.review = msg.review
-			m.state = reviewStateDisplay
-		}
-		return m, tea.Quit
 
 	case msgStructuredReviewGenerated:
 		if msg.err != nil {
@@ -479,28 +412,6 @@ func (m *reviewModel) View() string {
 		}
 		return loadingText
 
-	case reviewStateStreaming:
-		// Display streaming content with styling if available
-		var content string
-		if m.noStyle || m.renderer == nil {
-			content = m.review
-		} else {
-			// Try to render the current content with glamour
-			styled, err := m.renderer.Render(m.review)
-			if err != nil {
-				// Fallback to plain text if rendering fails
-				content = m.review
-			} else {
-				content = styled
-			}
-		}
-		
-		diffSummary := m.formatReviewDiffSummary()
-		if diffSummary != "" {
-			return fmt.Sprintf("%s\n\n%s", diffSummary, content)
-		}
-		return content
-
 	case reviewStateDisplay:
 		return "" // Review will be printed after TUI exits
 
@@ -511,42 +422,6 @@ func (m *reviewModel) View() string {
 	return ""
 }
 
-
-func (m *reviewModel) generateReviewStreaming() tea.Cmd {
-	return tea.Cmd(func() tea.Msg {
-		ctx := context.Background()
-		
-		go func() {
-			defer close(m.sub)
-			
-			err := m.aiClient.ReviewCodeStreaming(ctx, m.diff, func(chunk string) {
-				select {
-				case m.sub <- msgReviewChunk{chunk: chunk}:
-				case <-ctx.Done():
-					return
-				}
-			})
-			
-			if err != nil {
-				m.sub <- msgReviewChunk{} // Signal error by closing
-			}
-		}()
-		
-		return nil
-	})
-}
-
-func (m *reviewModel) waitForActivity(sub chan msgReviewChunk) tea.Cmd {
-	return func() tea.Msg {
-		chunk, ok := <-sub
-		if !ok {
-			// Channel closed, streaming completed
-			return msgReviewComplete{err: nil}
-		}
-		return chunk
-	}
-}
-
 func (m *reviewModel) Run() (string, error) {
 	p := tea.NewProgram(m)
 	_, err := p.Run()
@@ -555,31 +430,13 @@ func (m *reviewModel) Run() (string, error) {
 		return "", m.err
 	}
 	
-	// Print the review after TUI exits
-	if m.useStructured && m.structuredReview != nil {
+	// Print the structured review after TUI exits
+	if m.structuredReview != nil {
 		m.printStructuredReview()
-	} else if m.review != "" {
-		var content string
-		if m.noStyle || m.renderer == nil {
-			content = m.review
-		} else {
-			styled, renderErr := m.renderer.Render(m.review)
-			if renderErr != nil {
-				content = m.review
-			} else {
-				content = styled
-			}
-		}
-		
-		diffSummary := m.formatReviewDiffSummary()
-		if diffSummary != "" {
-			fmt.Printf("%s\n\n%s\n", diffSummary, content)
-		} else {
-			fmt.Print(content + "\n")
-		}
+		return "Review completed", err
 	}
 	
-	return m.review, err
+	return "", err
 }
 
 
