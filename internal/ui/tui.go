@@ -262,11 +262,10 @@ func (m *model) Run() error {
 	
 	// Print success message after TUI exits so it remains visible
 	if m.state == stateSuccess {
-		border := successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		header := successStyle.Render("✓ COMMIT SUCCESSFUL")
-		message := messageStyle.Render(fmt.Sprintf("\"%s\"", m.commitMessage))
+		message := messageStyle.Render(m.commitMessage)
 		
-		fmt.Printf("%s\n%s\n%s\n%s\n", border, header, message, border)
+		fmt.Printf("%s\n%s\n", header, message)
 	}
 	
 	return err
