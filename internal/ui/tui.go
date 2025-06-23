@@ -312,8 +312,7 @@ var (
 
 	editPromptStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("3")). // イエロー
-			Bold(true).
-			Margin(1, 0, 0, 0)
+			Bold(true)
 
 	diffStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("7")) // ライトグレー
