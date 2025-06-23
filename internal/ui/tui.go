@@ -616,50 +616,51 @@ func (m *reviewModel) printStructuredReview() {
 
 // printFileReview prints a single file's review with diff and comments
 func (m *reviewModel) printFileReview(fileReview ai.FileReview) {
-	// File header
-	fileHeader := fmt.Sprintf("📄 %s", fileReview.FileName)
-	fmt.Println(fileStyle.Render(fileHeader))
-	fmt.Println(strings.Repeat("─", len(fileHeader)))
+	// Simple file header like Claude Code
+	fmt.Printf("\n%s %s\n", 
+		fileStyle.Render("📄"), 
+		fileStyle.Render(fileReview.FileName))
+	fmt.Println(strings.Repeat("─", len(fileReview.FileName)+3))
 	
-	// Print comments first if any exist
 	if len(fileReview.Comments) > 0 {
-		fmt.Printf("%s\n", diffStyle.Render("Review Comments:"))
-		for _, comment := range fileReview.Comments {
+		// Print each comment with its relevant code context
+		for i, comment := range fileReview.Comments {
+			if i > 0 {
+				fmt.Println() // Space between comment blocks
+			}
+			
+			// Print comment first
 			m.printComment(comment)
+			
+			// Print relevant code context for this specific comment
+			if fileReview.DiffText != "" && comment.LineNo > 0 {
+				fmt.Println()
+				m.printCodeContext(fileReview.DiffText, comment.LineNo)
+			}
 		}
-		fmt.Println()
 		
-		// Print relevant diff sections near comments
-		if fileReview.DiffText != "" {
-			fmt.Printf("%s\n", diffStyle.Render("Relevant Code Changes:"))
-			m.printRelevantDiffSections(fileReview.DiffText, fileReview.Comments)
+		// If there are comments without line numbers, show general diff
+		hasGeneralComments := false
+		for _, comment := range fileReview.Comments {
+			if comment.LineNo == 0 {
+				hasGeneralComments = true
+				break
+			}
+		}
+		
+		if hasGeneralComments && fileReview.DiffText != "" {
+			fmt.Println()
+			fmt.Printf("%s\n", diffStyle.Render("📋 Related changes:"))
+			diffLines := m.getRelevantDiffSections(fileReview.DiffText, fileReview.Comments)
+			for _, line := range diffLines {
+				fmt.Println("  " + line)
+			}
 		}
 	} else {
-		fmt.Printf("%s\n", successStyle.Render("✓ No issues found in this file"))
+		fmt.Printf("  %s\n", successStyle.Render("✓ No issues found"))
 	}
-	
-	fmt.Println()
 }
 
-// printDiffWithSyntaxHighlight prints diff with basic syntax highlighting, showing only relevant lines
-func (m *reviewModel) printDiffWithSyntaxHighlight(diff string) {
-	lines := strings.Split(diff, "\n")
-	relevantLines := m.extractRelevantDiffLines(lines)
-	
-	for _, line := range relevantLines {
-		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
-			fmt.Println(addedStyle.Render(line))
-		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
-			fmt.Println(deletedStyle.Render(line))
-		} else if strings.HasPrefix(line, "@@") {
-			fmt.Println(titleStyle.Render(line))
-		} else if strings.HasPrefix(line, "diff --git") || strings.HasPrefix(line, "index") {
-			fmt.Println(diffStyle.Render(line))
-		} else {
-			fmt.Println(line)
-		}
-	}
-}
 
 // extractRelevantDiffLines extracts only the important lines from a diff
 func (m *reviewModel) extractRelevantDiffLines(lines []string) []string {
@@ -765,8 +766,8 @@ func (m *reviewModel) filterHunkLines(hunkLines []string) []string {
 	return result
 }
 
-// printRelevantDiffSections prints only diff sections that are relevant to comments
-func (m *reviewModel) printRelevantDiffSections(diff string, comments []ai.ReviewComment) {
+// getRelevantDiffSections returns diff sections that are relevant to comments as strings
+func (m *reviewModel) getRelevantDiffSections(diff string, comments []ai.ReviewComment) []string {
 	lines := strings.Split(diff, "\n")
 	
 	// If no comments have line numbers, show a minimal diff
@@ -781,27 +782,31 @@ func (m *reviewModel) printRelevantDiffSections(diff string, comments []ai.Revie
 	
 	if !hasLineNumbers {
 		// Show only changed lines if no line numbers in comments
-		m.printDiffWithSyntaxHighlight(diff)
-		return
+		return m.extractRelevantDiffLines(lines)
 	}
 	
 	// Find relevant hunks based on comment line numbers
 	relevantLines := m.extractCommentRelevantLines(lines, commentLines)
 	
+	// Apply syntax highlighting to each line
+	var styledLines []string
 	for _, line := range relevantLines {
 		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
-			fmt.Println(addedStyle.Render(line))
+			styledLines = append(styledLines, addedStyle.Render(line))
 		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
-			fmt.Println(deletedStyle.Render(line))
+			styledLines = append(styledLines, deletedStyle.Render(line))
 		} else if strings.HasPrefix(line, "@@") {
-			fmt.Println(titleStyle.Render(line))
+			styledLines = append(styledLines, titleStyle.Render(line))
 		} else if strings.HasPrefix(line, "diff --git") || strings.HasPrefix(line, "index") {
-			fmt.Println(diffStyle.Render(line))
+			styledLines = append(styledLines, diffStyle.Render(line))
 		} else {
-			fmt.Println(line)
+			styledLines = append(styledLines, line)
 		}
 	}
+	
+	return styledLines
 }
+
 
 // extractCommentRelevantLines extracts diff lines that are relevant to comment line numbers
 func (m *reviewModel) extractCommentRelevantLines(lines []string, commentLines map[int]bool) []string {
@@ -895,29 +900,29 @@ func max(a, b int) int {
 	return b
 }
 
-// printComment prints a review comment with appropriate styling
+// printComment prints a review comment in Claude Code style
 func (m *reviewModel) printComment(comment ai.ReviewComment) {
 	var prefix string
 	var style lipgloss.Style
 	
 	switch comment.Type {
 	case "must":
-		prefix = "🚨 MUST"
+		prefix = "🚨 MUST FIX"
 		style = errorStyle
 	case "want":
-		prefix = "💡 WANT"
+		prefix = "💡 SUGGEST"
 		style = promptStyle
 	case "nits":
-		prefix = "✨ NITS"
+		prefix = "✨ STYLE"
 		style = editPromptStyle
 	case "fyi":
-		prefix = "ℹ️  FYI"
-		style = diffStyle
+		prefix = "ℹ️  INFO"
+		style = titleStyle
 	case "imo":
-		prefix = "💭 IMO"
+		prefix = "💭 OPINION"
 		style = diffStyle
 	default:
-		prefix = "💬"
+		prefix = "💬 NOTE"
 		style = diffStyle
 	}
 	
@@ -926,10 +931,115 @@ func (m *reviewModel) printComment(comment ai.ReviewComment) {
 		lineInfo = fmt.Sprintf(" (Line %d)", comment.LineNo)
 	}
 	
-	fmt.Printf("  %s%s: %s\n", 
-		style.Render(prefix), 
-		lineInfo, 
-		comment.Message)
+	// Simple format like Claude Code
+	fmt.Printf("  %s%s\n", 
+		style.Render(prefix + lineInfo + ":"), 
+		"")
+	fmt.Printf("  %s\n", comment.Message)
+}
+
+// printCodeContext prints relevant code context for a specific line
+func (m *reviewModel) printCodeContext(diff string, targetLine int) {
+	lines := strings.Split(diff, "\n")
+	contextLines := m.getCodeContextForLine(lines, targetLine)
+	
+	if len(contextLines) > 0 {
+		fmt.Printf("  %s\n", diffStyle.Render("📋 Code context:"))
+		
+		// Add code block styling
+		codeBlockStyle := lipgloss.NewStyle().
+			Background(lipgloss.Color("235")). // Dark gray background
+			Padding(1).
+			Margin(0, 2)
+		
+		codeContent := strings.Join(contextLines, "\n")
+		fmt.Println(codeBlockStyle.Render(codeContent))
+	}
+}
+
+// getCodeContextForLine extracts code context around a specific line
+func (m *reviewModel) getCodeContextForLine(lines []string, targetLine int) []string {
+	var result []string
+	currentLineNum := 0
+	inHunk := false
+	contextWindow := 3 // Show 3 lines before/after target line
+	
+	for i, line := range lines {
+		// Header lines (always include if we find relevant context)
+		if strings.HasPrefix(line, "diff --git") || 
+		   strings.HasPrefix(line, "index") ||
+		   strings.HasPrefix(line, "+++") ||
+		   strings.HasPrefix(line, "---") {
+			continue // Skip for individual context
+		}
+		
+		// Hunk header - parse line numbers
+		if strings.HasPrefix(line, "@@") {
+			inHunk = true
+			// Extract starting line number
+			parts := strings.Fields(line)
+			if len(parts) >= 3 {
+				newPart := parts[2] // +new_start,new_count
+				if strings.HasPrefix(newPart, "+") {
+					newPart = strings.TrimPrefix(newPart, "+")
+					if commaIdx := strings.Index(newPart, ","); commaIdx >= 0 {
+						newPart = newPart[:commaIdx]
+					}
+					if num, err := fmt.Sscanf(newPart, "%d", &currentLineNum); err == nil && num == 1 {
+						currentLineNum-- // Will be incremented below
+					}
+				}
+			}
+			
+			// Check if this hunk contains our target line
+			hunkContainsTarget := false
+			tempLineNum := currentLineNum
+			for j := i + 1; j < len(lines); j++ {
+				if strings.HasPrefix(lines[j], "@@") || strings.HasPrefix(lines[j], "diff --git") {
+					break
+				}
+				if !strings.HasPrefix(lines[j], "-") {
+					tempLineNum++
+				}
+				if abs(tempLineNum-targetLine) <= contextWindow {
+					hunkContainsTarget = true
+					break
+				}
+			}
+			
+			if hunkContainsTarget {
+				result = append(result, titleStyle.Render(line))
+			}
+			continue
+		}
+		
+		if inHunk {
+			// Track line numbers
+			if !strings.HasPrefix(line, "-") {
+				currentLineNum++
+			}
+			
+			// Check if this line is within context window of target
+			if abs(currentLineNum-targetLine) <= contextWindow {
+				if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+					result = append(result, addedStyle.Render(line))
+				} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
+					result = append(result, deletedStyle.Render(line))
+				} else {
+					result = append(result, line)
+				}
+			}
+			
+			// End of hunk
+			if i == len(lines)-1 || 
+			   (i+1 < len(lines) && (strings.HasPrefix(lines[i+1], "@@") || 
+			   	strings.HasPrefix(lines[i+1], "diff --git"))) {
+				inHunk = false
+			}
+		}
+	}
+	
+	return result
 }
 
 func (m *reviewModel) formatReviewDiffSummary() string {
