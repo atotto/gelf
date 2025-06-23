@@ -21,9 +21,10 @@ var reviewCmd = &cobra.Command{
 }
 
 var (
-	reviewStaged bool
-	reviewModel  string
-	noStyle      bool
+	reviewStaged   bool
+	reviewModel    string
+	noStyle        bool
+	legacyReview   bool
 )
 
 var reviewWarningStyle = lipgloss.NewStyle().
@@ -34,6 +35,7 @@ func init() {
 	reviewCmd.Flags().BoolVar(&reviewStaged, "staged", false, "Review staged changes instead of unstaged changes")
 	reviewCmd.Flags().StringVar(&reviewModel, "model", "", "Override default model for this review")
 	reviewCmd.Flags().BoolVar(&noStyle, "no-style", false, "Disable markdown styling")
+	reviewCmd.Flags().BoolVar(&legacyReview, "legacy", false, "Use legacy review format (single streaming output)")
 }
 
 func runReview(cmd *cobra.Command, args []string) error {
@@ -77,8 +79,11 @@ func runReview(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create AI client: %w", err)
 	}
 
-	// Use TUI for loading and display experience with scrolling
+	// Use TUI for loading and display experience
 	reviewTUI := ui.NewReviewTUI(aiClient, diff, noStyle)
+	if legacyReview {
+		reviewTUI.SetLegacyMode(true)
+	}
 	_, err = reviewTUI.Run()
 	if err != nil {
 		return fmt.Errorf("failed to generate code review: %w", err)

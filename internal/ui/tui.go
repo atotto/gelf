@@ -277,12 +277,14 @@ type reviewModel struct {
 	diff     string
 	diffSummary git.DiffSummary
 	review   string
+	structuredReview *ai.StructuredReview
 	err      error
 	state    reviewState
 	spinner  spinner.Model
 	sub      chan msgReviewChunk
 	noStyle  bool
 	renderer *glamour.TermRenderer
+	useStructured bool
 }
 
 type reviewState int
@@ -296,6 +298,11 @@ const (
 
 type msgReviewGenerated struct {
 	review string
+	err    error
+}
+
+type msgStructuredReviewGenerated struct {
+	review *ai.StructuredReview
 	err    error
 }
 
@@ -374,18 +381,27 @@ func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *revie
 	diffSummary := git.ParseDiffSummary(diff)
 	
 	return &reviewModel{
-		aiClient:    aiClient,
-		diff:        diff,
-		diffSummary: diffSummary,
-		state:       reviewStateLoading,
-		spinner:     s,
-		sub:         make(chan msgReviewChunk, 100),
-		noStyle:     noStyle,
-		renderer:    renderer,
+		aiClient:      aiClient,
+		diff:          diff,
+		diffSummary:   diffSummary,
+		state:         reviewStateLoading,
+		spinner:       s,
+		sub:           make(chan msgReviewChunk, 100),
+		noStyle:       noStyle,
+		renderer:      renderer,
+		useStructured: true, // Use structured review by default
 	}
 }
 
+// SetLegacyMode enables legacy streaming review mode
+func (m *reviewModel) SetLegacyMode(legacy bool) {
+	m.useStructured = !legacy
+}
+
 func (m *reviewModel) Init() tea.Cmd {
+	if m.useStructured {
+		return tea.Batch(m.spinner.Tick, m.generateStructuredReview())
+	}
 	return tea.Batch(m.spinner.Tick, m.generateReviewStreaming(), m.waitForActivity(m.sub))
 }
 
@@ -418,7 +434,7 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.state = reviewStateDisplay
 		}
-		return m, nil
+		return m, tea.Quit
 
 	case msgReviewGenerated:
 		if msg.err != nil {
@@ -428,7 +444,17 @@ func (m *reviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.review = msg.review
 			m.state = reviewStateDisplay
 		}
-		return m, nil
+		return m, tea.Quit
+
+	case msgStructuredReviewGenerated:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = reviewStateError
+		} else {
+			m.structuredReview = msg.review
+			m.state = reviewStateDisplay
+		}
+		return m, tea.Quit
 	}
 
 	// Update spinner
@@ -530,7 +556,9 @@ func (m *reviewModel) Run() (string, error) {
 	}
 	
 	// Print the review after TUI exits
-	if m.review != "" {
+	if m.useStructured && m.structuredReview != nil {
+		m.printStructuredReview()
+	} else if m.review != "" {
 		var content string
 		if m.noStyle || m.renderer == nil {
 			content = m.review
@@ -555,6 +583,354 @@ func (m *reviewModel) Run() (string, error) {
 }
 
 
+
+// generateStructuredReview generates a structured review
+func (m *reviewModel) generateStructuredReview() tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		ctx := context.Background()
+		review, err := m.aiClient.ReviewCodeStructured(ctx, m.diff)
+		return msgStructuredReviewGenerated{
+			review: review,
+			err:    err,
+		}
+	})
+}
+
+// printStructuredReview prints the structured review with diff and comments
+func (m *reviewModel) printStructuredReview() {
+	if m.structuredReview == nil {
+		return
+	}
+	
+	// Print overall summary
+	fmt.Printf("%s %s\n", 
+		titleStyle.Render("📋 Code Review Summary:"), 
+		m.structuredReview.Summary)
+	fmt.Println()
+	
+	// Print each file with its diff and comments
+	for _, fileReview := range m.structuredReview.FileReviews {
+		m.printFileReview(fileReview)
+	}
+}
+
+// printFileReview prints a single file's review with diff and comments
+func (m *reviewModel) printFileReview(fileReview ai.FileReview) {
+	// File header
+	fileHeader := fmt.Sprintf("📄 %s", fileReview.FileName)
+	fmt.Println(fileStyle.Render(fileHeader))
+	fmt.Println(strings.Repeat("─", len(fileHeader)))
+	
+	// Print comments first if any exist
+	if len(fileReview.Comments) > 0 {
+		fmt.Printf("%s\n", diffStyle.Render("Review Comments:"))
+		for _, comment := range fileReview.Comments {
+			m.printComment(comment)
+		}
+		fmt.Println()
+		
+		// Print relevant diff sections near comments
+		if fileReview.DiffText != "" {
+			fmt.Printf("%s\n", diffStyle.Render("Relevant Code Changes:"))
+			m.printRelevantDiffSections(fileReview.DiffText, fileReview.Comments)
+		}
+	} else {
+		fmt.Printf("%s\n", successStyle.Render("✓ No issues found in this file"))
+	}
+	
+	fmt.Println()
+}
+
+// printDiffWithSyntaxHighlight prints diff with basic syntax highlighting, showing only relevant lines
+func (m *reviewModel) printDiffWithSyntaxHighlight(diff string) {
+	lines := strings.Split(diff, "\n")
+	relevantLines := m.extractRelevantDiffLines(lines)
+	
+	for _, line := range relevantLines {
+		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+			fmt.Println(addedStyle.Render(line))
+		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
+			fmt.Println(deletedStyle.Render(line))
+		} else if strings.HasPrefix(line, "@@") {
+			fmt.Println(titleStyle.Render(line))
+		} else if strings.HasPrefix(line, "diff --git") || strings.HasPrefix(line, "index") {
+			fmt.Println(diffStyle.Render(line))
+		} else {
+			fmt.Println(line)
+		}
+	}
+}
+
+// extractRelevantDiffLines extracts only the important lines from a diff
+func (m *reviewModel) extractRelevantDiffLines(lines []string) []string {
+	var result []string
+	var currentHunk []string
+	inHunk := false
+	hasChanges := false
+	
+	for i, line := range lines {
+		// Header lines (always include)
+		if strings.HasPrefix(line, "diff --git") || 
+		   strings.HasPrefix(line, "index") ||
+		   strings.HasPrefix(line, "+++") ||
+		   strings.HasPrefix(line, "---") {
+			result = append(result, line)
+			continue
+		}
+		
+		// Hunk header
+		if strings.HasPrefix(line, "@@") {
+			// Process previous hunk if it had changes
+			if inHunk && hasChanges {
+				result = append(result, currentHunk...)
+			}
+			
+			// Start new hunk
+			currentHunk = []string{line}
+			inHunk = true
+			hasChanges = false
+			continue
+		}
+		
+		if inHunk {
+			currentHunk = append(currentHunk, line)
+			
+			// Check if this line is a change (added or removed)
+			if strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") {
+				hasChanges = true
+			}
+			
+			// If this is the last line or next line starts a new hunk/file
+			if i == len(lines)-1 || 
+			   (i+1 < len(lines) && (strings.HasPrefix(lines[i+1], "@@") || 
+			   	strings.HasPrefix(lines[i+1], "diff --git"))) {
+				
+				if hasChanges {
+					// Only include context lines around changes
+					result = append(result, m.filterHunkLines(currentHunk)...)
+				}
+				inHunk = false
+				hasChanges = false
+			}
+		}
+	}
+	
+	return result
+}
+
+// filterHunkLines filters a hunk to show only changed lines with minimal context
+func (m *reviewModel) filterHunkLines(hunkLines []string) []string {
+	if len(hunkLines) == 0 {
+		return hunkLines
+	}
+	
+	// Always include the hunk header
+	result := []string{hunkLines[0]}
+	
+	// Find changed lines (+ or -)
+	changedIndices := make(map[int]bool)
+	for i := 1; i < len(hunkLines); i++ {
+		line := hunkLines[i]
+		if strings.HasPrefix(line, "+") || strings.HasPrefix(line, "-") {
+			changedIndices[i] = true
+		}
+	}
+	
+	// If no changes, return just the header
+	if len(changedIndices) == 0 {
+		return result
+	}
+	
+	// Include changed lines with minimal context (1 line before/after)
+	contextLines := 1
+	included := make(map[int]bool)
+	
+	for changeIdx := range changedIndices {
+		// Include the changed line
+		included[changeIdx] = true
+		
+		// Include context lines
+		for j := max(1, changeIdx-contextLines); j <= min(len(hunkLines)-1, changeIdx+contextLines); j++ {
+			included[j] = true
+		}
+	}
+	
+	// Add included lines in order
+	for i := 1; i < len(hunkLines); i++ {
+		if included[i] {
+			result = append(result, hunkLines[i])
+		}
+	}
+	
+	return result
+}
+
+// printRelevantDiffSections prints only diff sections that are relevant to comments
+func (m *reviewModel) printRelevantDiffSections(diff string, comments []ai.ReviewComment) {
+	lines := strings.Split(diff, "\n")
+	
+	// If no comments have line numbers, show a minimal diff
+	commentLines := make(map[int]bool)
+	hasLineNumbers := false
+	for _, comment := range comments {
+		if comment.LineNo > 0 {
+			commentLines[comment.LineNo] = true
+			hasLineNumbers = true
+		}
+	}
+	
+	if !hasLineNumbers {
+		// Show only changed lines if no line numbers in comments
+		m.printDiffWithSyntaxHighlight(diff)
+		return
+	}
+	
+	// Find relevant hunks based on comment line numbers
+	relevantLines := m.extractCommentRelevantLines(lines, commentLines)
+	
+	for _, line := range relevantLines {
+		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+			fmt.Println(addedStyle.Render(line))
+		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
+			fmt.Println(deletedStyle.Render(line))
+		} else if strings.HasPrefix(line, "@@") {
+			fmt.Println(titleStyle.Render(line))
+		} else if strings.HasPrefix(line, "diff --git") || strings.HasPrefix(line, "index") {
+			fmt.Println(diffStyle.Render(line))
+		} else {
+			fmt.Println(line)
+		}
+	}
+}
+
+// extractCommentRelevantLines extracts diff lines that are relevant to comment line numbers
+func (m *reviewModel) extractCommentRelevantLines(lines []string, commentLines map[int]bool) []string {
+	var result []string
+	currentLineNum := 0
+	inHunk := false
+	contextWindow := 3 // Show 3 lines before/after comment lines
+	
+	for i, line := range lines {
+		// Header lines (always include)
+		if strings.HasPrefix(line, "diff --git") || 
+		   strings.HasPrefix(line, "index") ||
+		   strings.HasPrefix(line, "+++") ||
+		   strings.HasPrefix(line, "---") {
+			result = append(result, line)
+			continue
+		}
+		
+		// Hunk header - parse line numbers
+		if strings.HasPrefix(line, "@@") {
+			result = append(result, line)
+			inHunk = true
+			// Extract starting line number from @@ -old_start,old_count +new_start,new_count @@
+			parts := strings.Fields(line)
+			if len(parts) >= 3 {
+				newPart := parts[2] // +new_start,new_count
+				if strings.HasPrefix(newPart, "+") {
+					newPart = strings.TrimPrefix(newPart, "+")
+					if commaIdx := strings.Index(newPart, ","); commaIdx >= 0 {
+						newPart = newPart[:commaIdx]
+					}
+					if num, err := fmt.Sscanf(newPart, "%d", &currentLineNum); err == nil && num == 1 {
+						currentLineNum-- // Will be incremented below
+					}
+				}
+			}
+			continue
+		}
+		
+		if inHunk {
+			// Track line numbers
+			if !strings.HasPrefix(line, "-") {
+				currentLineNum++
+			}
+			
+			// Check if this line or nearby lines have comments
+			isRelevant := false
+			for commentLine := range commentLines {
+				if abs(currentLineNum-commentLine) <= contextWindow {
+					isRelevant = true
+					break
+				}
+			}
+			
+			if isRelevant {
+				result = append(result, line)
+			}
+			
+			// End of hunk
+			if i == len(lines)-1 || 
+			   (i+1 < len(lines) && (strings.HasPrefix(lines[i+1], "@@") || 
+			   	strings.HasPrefix(lines[i+1], "diff --git"))) {
+				inHunk = false
+			}
+		}
+	}
+	
+	return result
+}
+
+// abs returns the absolute value of x
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// Helper functions for min/max
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// printComment prints a review comment with appropriate styling
+func (m *reviewModel) printComment(comment ai.ReviewComment) {
+	var prefix string
+	var style lipgloss.Style
+	
+	switch comment.Type {
+	case "must":
+		prefix = "🚨 MUST"
+		style = errorStyle
+	case "want":
+		prefix = "💡 WANT"
+		style = promptStyle
+	case "nits":
+		prefix = "✨ NITS"
+		style = editPromptStyle
+	case "fyi":
+		prefix = "ℹ️  FYI"
+		style = diffStyle
+	case "imo":
+		prefix = "💭 IMO"
+		style = diffStyle
+	default:
+		prefix = "💬"
+		style = diffStyle
+	}
+	
+	lineInfo := ""
+	if comment.LineNo > 0 {
+		lineInfo = fmt.Sprintf(" (Line %d)", comment.LineNo)
+	}
+	
+	fmt.Printf("  %s%s: %s\n", 
+		style.Render(prefix), 
+		lineInfo, 
+		comment.Message)
+}
 
 func (m *reviewModel) formatReviewDiffSummary() string {
 	if len(m.diffSummary.Files) == 0 {
