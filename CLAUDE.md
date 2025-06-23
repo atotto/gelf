@@ -4,52 +4,66 @@
 
 ## プロジェクト概要
 
-gelfは、Vertex AI (Gemini) を使用してGitコミットメッセージを自動生成するGo製CLIツールです。ステージングされた変更を分析し、Bubble Teaで構築されたインタラクティブなTUIインターフェースを通じて適切なコミットメッセージを生成します。
+gelfは、Vertex AI (Gemini) を使用してGitコミットメッセージの自動生成とAIによるコードレビューを提供するGo製CLIツールです。ステージング済み・未ステージ変更を分析し、Bubble Teaで構築されたインタラクティブなTUIインターフェースを通じて適切なコミットメッセージ生成と包括的なコードレビューフィードバックを提供します。
 
 ## アプリケーションアーキテクチャ
 
 ### 核となる機能
-ツールは以下のシンプルなワークフローに従います：
+
+#### コミット機能
 1. **ステージング変更をチェック** - `git diff --staged` でステージングされた変更を取得
 2. **コミットメッセージ生成** - diffをVertex AI (Gemini) に送信してメッセージ生成
-3. **ユーザー確認** - 生成されたメッセージをTUIでYes/Noプロンプトと共に表示
+3. **ユーザー確認** - 生成されたメッセージをTUIでYes/No/編集プロンプトと共に表示
 4. **コミット実行** - ユーザーが承認した場合に変更をコミット
+
+#### コードレビュー機能
+1. **変更検出** - ステージング済み（`git diff --staged`）または未ステージ（`git diff`）変更を取得
+2. **AI分析** - diffをVertex AI (Gemini) に送信してリアルタイムストリーミング分析
+3. **フィードバック表示** - セキュリティ、パフォーマンス、保守性の観点から包括的なレビュー結果を表示
 
 ### プロジェクト構造
 ```
 cmd/
-  ├── root.go          # ルートコマンド定義
-  └── git/
-      ├── git.go       # gitサブコマンドグループ
-      ├── commit.go    # git commitサブコマンド実装
-      └── message.go   # git messageサブコマンド実装
+├── root.go          # ルートコマンド定義
+├── commit.go        # commitコマンド実装
+└── review.go        # reviewコマンド実装
 internal/
   ├── git/
-  │   └── diff.go      # Git操作 (git diff --staged)
+  │   └── diff.go      # Git操作 (staged/unstaged diff取得)
   ├── ai/
-  │   └── vertex.go    # メッセージ生成のためのVertex AI統合
+  │   └── vertex.go    # コミットメッセージ生成・コードレビューのためのVertex AI統合
   ├── ui/
-  │   └── tui.go       # Bubble Tea TUI実装
+  │   └── tui.go       # Bubble Tea TUI実装（コミット・レビュー両対応）
   └── config/
       └── config.go    # 設定管理 (APIキーなど)
 main.go               # アプリケーションエントリーポイント
 ```
 
 ### TUIフロー
+
+#### コミットワークフロー
 1. **起動** - ステージング変更の確認
 2. **ローディング** - Vertex AI呼び出し中にスピナー表示
-3. **確認** - 生成されたメッセージを[y/n]プロンプトと共に表示
+3. **確認** - 生成されたメッセージを[y/n/e]プロンプトと共に表示（編集機能付き）
 4. **結果** - コミット成功/失敗を表示
 
+#### レビューワークフロー
+1. **起動** - 変更の確認（staged/unstagedを選択可能）
+2. **ストリーミング分析** - リアルタイムでVertex AI分析結果を表示
+3. **結果表示** - マークダウン形式での包括的レビューフィードバック
+
 ### 技術仕様
-- **対象**: ステージング済み変更のみ (`git diff --staged`)
+- **コミット対象**: ステージング済み変更のみ (`git diff --staged`)
+- **レビュー対象**: ステージング済み (`git diff --staged`) または未ステージ (`git diff`) 変更
 - **AIプロバイダー**: Vertex AI (Geminiモデル)
-- **デフォルトモデル**: gemini-2.5-flash-preview-05-20
-- **モデル設定**: 環境変数 `GELF_DEFAULT_MODEL` で変更可能
+- **デフォルトFlashモデル**: gemini-2.5-flash-preview-05-20
+- **デフォルトProモデル**: gemini-2.5-pro-preview-05-06
+- **モデル設定**: 設定ファイル（gelf.yml）で変更可能
 - **入力**: 生のgit diff出力 (フィルタリングなし)
 - **UIフレームワーク**: Bubble Tea (TUI用)
-- **ユーザーインタラクション**: シンプルなYes/No確認 (初期版では編集機能なし)
-- **エラーハンドリング**: 最小限 (初期版では優先度低)
+- **ストリーミング**: リアルタイムAI応答表示（レビュー機能）
+- **マークダウン表示**: glamourライブラリによる整形表示
+- **ユーザーインタラクション**: コミット承認・編集、レビュー結果閲覧
 
 ## コマンド使用法
 
@@ -60,9 +74,16 @@ gelf commit --dry-run          # コミットメッセージ生成のみ（diff�
 gelf commit --dry-run --quiet  # メッセージ生成のみ（外部ツール連携用）
 gelf commit --model MODEL      # 一時的にモデルを変更
 
+# レビュー関連
+gelf review                    # 未ステージ変更をレビュー（デフォルト）
+gelf review --staged           # ステージング済み変更をレビュー
+gelf review --model MODEL      # 一時的にモデルを変更
+gelf review --no-style         # マークダウンスタイリングを無効化
+
 # ヘルプ
 gelf --help          # ヘルプ表示
 gelf commit --help   # コミットコマンドのヘルプ
+gelf review --help   # レビューコマンドのヘルプ
 ```
 
 ## 開発コマンド
@@ -74,6 +95,8 @@ go test ./...             # テスト実行
 go mod tidy               # 依存関係整理
 go run main.go commit        # アプリケーション実行 (commitコマンド)
 go run main.go commit --dry-run  # メッセージ生成のみのテスト
+go run main.go review        # レビューコマンド実行
+go run main.go review --staged   # ステージング済み変更のレビュー
 ```
 
 ## 依存関係
@@ -81,8 +104,11 @@ go run main.go commit --dry-run  # メッセージ生成のみのテスト
 必要な主要Goモジュール：
 - `github.com/charmbracelet/bubbletea` - TUIフレームワーク
 - `github.com/charmbracelet/lipgloss` - スタイリングとレイアウト
+- `github.com/charmbracelet/bubbles` - TUI components (spinner)
+- `github.com/charmbracelet/glamour` - マークダウンレンダリング（レビュー表示用）
 - `google.golang.org/genai` - Vertex AIクライアント
 - `github.com/spf13/cobra` - CLIフレームワーク (サブコマンド実装用)
+- `gopkg.in/yaml.v3` - YAML設定ファイルサポート
 
 ## 設定
 
@@ -106,7 +132,8 @@ vertex_ai:
   location: "us-central1"
 
 gelf:
-  default_model: "gemini-2.5-flash-preview-05-20"
+  flash_model: "gemini-2.5-flash-preview-05-20"  # 高速処理用モデル
+  pro_model: "gemini-2.5-pro-preview-05-06"       # 高品質処理用モデル
 ```
 
 設定の優先順位（高い順）：
