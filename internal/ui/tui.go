@@ -242,9 +242,9 @@ func (m *model) formatDiffSummary() string {
 		}
 		
 		if len(changes) > 0 {
-			parts = append(parts, fmt.Sprintf("  %s (%s)", fileName, strings.Join(changes, ", ")))
+			parts = append(parts, fmt.Sprintf(" • %s (%s)", fileName, strings.Join(changes, ", ")))
 		} else {
-			parts = append(parts, fmt.Sprintf("  %s", fileName))
+			parts = append(parts, fmt.Sprintf(" • %s", fileName))
 		}
 	}
 	
