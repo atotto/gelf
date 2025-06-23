@@ -45,13 +45,13 @@ func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient
 	if credentialsPath == "" {
 		credentialsPath = os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	}
-	
+
 	// If we have a credentials path, set it as GOOGLE_APPLICATION_CREDENTIALS
 	// since genai.NewClient uses this environment variable internally
 	if credentialsPath != "" {
 		originalCreds := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath)
-		
+
 		// Restore original credentials after client creation
 		defer func() {
 			if originalCreds != "" {
@@ -61,7 +61,7 @@ func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient
 			}
 		}()
 	}
-	
+
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		Project:  cfg.ProjectID,
 		Location: cfg.Location,
@@ -111,7 +111,7 @@ Git diff:
 
 Respond with only the commit message, no additional text or formatting.`, diff)
 
-	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel, 
+	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{
 			genai.NewUserContentFromText(prompt),
 		},
@@ -138,15 +138,14 @@ Respond with only the commit message, no additional text or formatting.`, diff)
 	return part.Text, nil
 }
 
-
 // ReviewCodeStructured generates a structured review with file-specific comments
 func (v *VertexAIClient) ReviewCodeStructured(ctx context.Context, diff string) (*StructuredReview, error) {
 	// First, parse the diff to extract file information
 	files := v.parseDiffFiles(diff)
-	
+
 	var fileReviews []FileReview
 	var allComments []ReviewComment
-	
+
 	for _, file := range files {
 		// Generate review for each file individually
 		fileReview, err := v.reviewSingleFile(ctx, file.fileName, file.diffText)
@@ -154,17 +153,17 @@ func (v *VertexAIClient) ReviewCodeStructured(ctx context.Context, diff string) 
 			// Continue with other files if one fails
 			continue
 		}
-		
+
 		fileReviews = append(fileReviews, *fileReview)
 		allComments = append(allComments, fileReview.Comments...)
 	}
-	
+
 	// Generate overall summary
 	summary, err := v.generateReviewSummary(ctx, diff, allComments)
 	if err != nil {
 		summary = "Failed to generate summary"
 	}
-	
+
 	return &StructuredReview{
 		Summary:     summary,
 		FileReviews: fileReviews,
@@ -180,11 +179,11 @@ func (v *VertexAIClient) parseDiffFiles(diff string) []struct {
 		fileName string
 		diffText string
 	}
-	
+
 	lines := strings.Split(diff, "\n")
 	var currentFile string
 	var currentDiff []string
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "diff --git") {
 			// Save previous file if exists
@@ -197,7 +196,7 @@ func (v *VertexAIClient) parseDiffFiles(diff string) []struct {
 					diffText: strings.Join(currentDiff, "\n"),
 				})
 			}
-			
+
 			// Extract filename from "diff --git a/file b/file"
 			parts := strings.Fields(line)
 			if len(parts) >= 4 {
@@ -208,7 +207,7 @@ func (v *VertexAIClient) parseDiffFiles(diff string) []struct {
 			currentDiff = append(currentDiff, line)
 		}
 	}
-	
+
 	// Add the last file
 	if currentFile != "" && len(currentDiff) > 0 {
 		files = append(files, struct {
@@ -219,7 +218,7 @@ func (v *VertexAIClient) parseDiffFiles(diff string) []struct {
 			diffText: strings.Join(currentDiff, "\n"),
 		})
 	}
-	
+
 	return files
 }
 
@@ -288,7 +287,7 @@ File diff:
 	var result struct {
 		Comments []ReviewComment `json:"comments"`
 	}
-	
+
 	if err := json.Unmarshal([]byte(part.Text), &result); err != nil {
 		// Fallback: try to extract JSON from response if it's wrapped in markdown
 		text := strings.TrimSpace(part.Text)
@@ -297,7 +296,7 @@ File diff:
 			text = strings.TrimSuffix(text, "```")
 			text = strings.TrimSpace(text)
 		}
-		
+
 		if err := json.Unmarshal([]byte(text), &result); err != nil {
 			return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 		}
@@ -315,11 +314,11 @@ func (v *VertexAIClient) generateReviewSummary(ctx context.Context, diff string,
 	if len(comments) == 0 {
 		return "No significant issues found in the code changes.", nil
 	}
-	
+
 	mustCount := 0
 	wantCount := 0
 	nitsCount := 0
-	
+
 	for _, comment := range comments {
 		switch comment.Type {
 		case "must":
@@ -330,7 +329,7 @@ func (v *VertexAIClient) generateReviewSummary(ctx context.Context, diff string,
 			nitsCount++
 		}
 	}
-	
+
 	prompt := fmt.Sprintf(`Based on the following code review findings, generate a brief summary (1-2 sentences):
 
 FINDINGS:
@@ -339,7 +338,7 @@ FINDINGS:
 - Minor issues (nits): %d
 - Total comments: %d
 
-Provide a concise summary of the overall code quality and main areas of concern.`, 
+Provide a concise summary of the overall code quality and main areas of concern.`,
 		mustCount, wantCount, nitsCount, len(comments))
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,

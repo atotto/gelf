@@ -20,7 +20,7 @@ func Execute() error {
 func init() {
 	rootCmd.AddCommand(commitCmd)
 	rootCmd.AddCommand(reviewCmd)
-	
+
 	// Add completion commands
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",

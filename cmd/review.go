@@ -27,7 +27,7 @@ var (
 )
 
 var reviewWarningStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("3")).    // イエロー
+	Foreground(lipgloss.Color("3")). // イエロー
 	Bold(true)
 
 func init() {

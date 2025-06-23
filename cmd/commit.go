@@ -28,7 +28,7 @@ var (
 )
 
 var warningStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("3")).    // イエロー
+	Foreground(lipgloss.Color("3")). // イエロー
 	Bold(true)
 
 func init() {
@@ -83,7 +83,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 					if file.DeletedLines > 0 {
 						changes = append(changes, fmt.Sprintf("-%d", file.DeletedLines))
 					}
-					
+
 					if len(changes) > 0 {
 						fmt.Fprintf(cmd.ErrOrStderr(), "%s (%s)\n", file.Name, strings.Join(changes, ", "))
 					} else {

@@ -74,7 +74,7 @@ func loadFromFile() (*FileConfig, error) {
 		"gelf.yml",
 		"gelf.yaml",
 	}
-	
+
 	// Add XDG config directory paths
 	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
 		configPaths = append(configPaths,
@@ -88,7 +88,7 @@ func loadFromFile() (*FileConfig, error) {
 			filepath.Join(homeDir, ".config", "gelf", "gelf.yaml"),
 		)
 	}
-	
+
 	// Add home directory paths
 	if homeDir, err := os.UserHomeDir(); err == nil {
 		configPaths = append(configPaths,

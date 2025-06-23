@@ -36,29 +36,29 @@ type DiffSummary struct {
 }
 
 type FileDiff struct {
-	Name      string
-	AddedLines    int
-	DeletedLines  int
+	Name         string
+	AddedLines   int
+	DeletedLines int
 }
 
 func ParseDiffSummary(diff string) DiffSummary {
 	summary := DiffSummary{Files: []FileDiff{}}
-	
+
 	fileRegex := regexp.MustCompile(`^diff --git a/(.*) b/(.*)$`)
 	addedRegex := regexp.MustCompile(`^\+[^+].*$`)
 	deletedRegex := regexp.MustCompile(`^-[^-].*$`)
-	
+
 	lines := strings.Split(diff, "\n")
 	var currentFile *FileDiff
-	
+
 	for _, line := range lines {
 		if matches := fileRegex.FindStringSubmatch(line); matches != nil {
 			if currentFile != nil {
 				summary.Files = append(summary.Files, *currentFile)
 			}
 			currentFile = &FileDiff{
-				Name: matches[1],
-				AddedLines: 0,
+				Name:         matches[1],
+				AddedLines:   0,
 				DeletedLines: 0,
 			}
 		} else if currentFile != nil {
@@ -69,10 +69,10 @@ func ParseDiffSummary(diff string) DiffSummary {
 			}
 		}
 	}
-	
+
 	if currentFile != nil {
 		summary.Files = append(summary.Files, *currentFile)
 	}
-	
+
 	return summary
 }
