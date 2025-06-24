@@ -448,7 +448,7 @@ func (m *reviewModel) printStructuredReview() {
 	}
 
 	// Print overall summary
-	fmt.Printf("%s %s\n",
+	fmt.Printf("%s\n%s\n",
 		titleStyle.Render("📋 Code Review Summary:"),
 		m.structuredReview.Summary)
 	fmt.Println()
