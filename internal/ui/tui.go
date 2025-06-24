@@ -35,6 +35,7 @@ type model struct {
 	state           state
 	spinner         spinner.Model
 	textInput       textinput.Model
+	commitLanguage  string
 }
 
 type msgCommitGenerated struct {
@@ -46,7 +47,7 @@ type msgCommitDone struct {
 	err error
 }
 
-func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
+func NewTUI(aiClient *ai.VertexAIClient, diff string, commitLanguage string) *model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = loadingStyle
@@ -59,12 +60,13 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string) *model {
 	diffSummary := git.ParseDiffSummary(diff)
 
 	return &model{
-		aiClient:    aiClient,
-		diff:        diff,
-		diffSummary: diffSummary,
-		state:       stateLoading,
-		spinner:     s,
-		textInput:   ti,
+		aiClient:       aiClient,
+		diff:           diff,
+		diffSummary:    diffSummary,
+		state:          stateLoading,
+		spinner:        s,
+		textInput:      ti,
+		commitLanguage: commitLanguage,
 	}
 }
 
@@ -199,7 +201,7 @@ func (m *model) View() string {
 func (m *model) generateCommitMessage() tea.Cmd {
 	return tea.Cmd(func() tea.Msg {
 		ctx := context.Background()
-		message, err := m.aiClient.GenerateCommitMessage(ctx, m.diff)
+		message, err := m.aiClient.GenerateCommitMessage(ctx, m.diff, m.commitLanguage)
 		return msgCommitGenerated{
 			message: strings.TrimSpace(message),
 			err:     err,
@@ -268,6 +270,7 @@ type reviewModel struct {
 	state            reviewState
 	spinner          spinner.Model
 	noStyle          bool
+	reviewLanguage   string
 }
 
 type reviewState int
@@ -329,7 +332,7 @@ var (
 
 )
 
-func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *reviewModel {
+func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool, reviewLanguage string) *reviewModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = loadingStyle
@@ -337,12 +340,13 @@ func NewReviewTUI(aiClient *ai.VertexAIClient, diff string, noStyle bool) *revie
 	diffSummary := git.ParseDiffSummary(diff)
 
 	return &reviewModel{
-		aiClient:    aiClient,
-		diff:        diff,
-		diffSummary: diffSummary,
-		state:       reviewStateLoading,
-		spinner:     s,
-		noStyle:     noStyle,
+		aiClient:       aiClient,
+		diff:           diff,
+		diffSummary:    diffSummary,
+		state:          reviewStateLoading,
+		spinner:        s,
+		noStyle:        noStyle,
+		reviewLanguage: reviewLanguage,
 	}
 }
 
@@ -429,7 +433,7 @@ func (m *reviewModel) Run() (string, error) {
 func (m *reviewModel) generateStructuredReview() tea.Cmd {
 	return tea.Cmd(func() tea.Msg {
 		ctx := context.Background()
-		review, err := m.aiClient.ReviewCodeStructured(ctx, m.diff)
+		review, err := m.aiClient.ReviewCodeStructured(ctx, m.diff, m.reviewLanguage)
 		return msgStructuredReviewGenerated{
 			review: review,
 			err:    err,

@@ -21,9 +21,10 @@ var reviewCmd = &cobra.Command{
 }
 
 var (
-	reviewStaged bool
-	reviewModel  string
-	noStyle      bool
+	reviewStaged   bool
+	reviewModel    string
+	noStyle        bool
+	reviewLanguage string
 )
 
 var reviewWarningStyle = lipgloss.NewStyle().
@@ -34,6 +35,7 @@ func init() {
 	reviewCmd.Flags().BoolVar(&reviewStaged, "staged", false, "Review staged changes instead of unstaged changes")
 	reviewCmd.Flags().StringVar(&reviewModel, "model", "", "Override default model for this review")
 	reviewCmd.Flags().BoolVar(&noStyle, "no-style", false, "Disable markdown styling")
+	reviewCmd.Flags().StringVar(&reviewLanguage, "language", "", "Language for code review generation (e.g., english, japanese)")
 }
 
 func runReview(cmd *cobra.Command, args []string) error {
@@ -46,6 +48,13 @@ func runReview(cmd *cobra.Command, args []string) error {
 
 	if reviewModel != "" {
 		cfg.FlashModel = reviewModel
+	} else {
+		// Use the configured review model (pro model by default)
+		cfg.FlashModel = cfg.ProModel
+	}
+
+	if reviewLanguage != "" {
+		cfg.ReviewLanguage = reviewLanguage
 	}
 
 	var diff string
@@ -78,7 +87,7 @@ func runReview(cmd *cobra.Command, args []string) error {
 	}
 
 	// Use TUI for loading and display experience
-	reviewTUI := ui.NewReviewTUI(aiClient, diff, noStyle)
+	reviewTUI := ui.NewReviewTUI(aiClient, diff, noStyle, cfg.ReviewLanguage)
 	_, err = reviewTUI.Run()
 	if err != nil {
 		return fmt.Errorf("failed to generate code review: %w", err)

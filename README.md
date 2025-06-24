@@ -10,6 +10,7 @@ gelf is a Go-based CLI tool that automatically generates Git commit messages and
 - ⚡ **Fast Processing**: Real-time progress indicators and streaming responses
 - 🛡️ **Safe Operations**: Only operates on staged changes for secure workflow
 - 🌐 **Cross-Platform**: Works seamlessly across different operating systems
+- 🌍 **Multi-language Support**: Generate commit messages and code reviews in multiple languages
 
 ## 🛠️ Installation
 
@@ -60,9 +61,19 @@ vertex_ai:
   project_id: "your-gcp-project-id"
   location: "us-central1"  # optional, default: us-central1
 
-gelf:
-  flash_model: "gemini-2.5-flash-preview-05-20"  # optional
-  pro_model: "gemini-2.5-pro-preview-05-06"       # optional
+model:
+  flash: "gemini-2.5-flash-preview-05-20"  # optional
+  pro: "gemini-2.5-pro-preview-05-06"      # optional
+
+language: "english"  # optional, default: english
+
+commit:
+  model: "flash"     # optional, default: flash
+  language: "english"  # optional, inherits from global language
+
+review:
+  model: "pro"       # optional, default: pro
+  language: "english"  # optional, inherits from global language
 ```
 
 #### Environment Variables (Alternative)
@@ -83,7 +94,7 @@ export VERTEXAI_PROJECT="your-project-id"
 export VERTEXAI_LOCATION="us-central1"
 ```
 
-**Note**: Model configuration (flash_model and pro_model) can only be configured via configuration file, not environment variables.
+**Note**: Model configuration and language settings can only be configured via configuration file, not environment variables.
 
 ### 2. Google Cloud Authentication
 
@@ -157,6 +168,9 @@ gelf commit --dry-run --quiet
 # Use specific model temporarily
 gelf commit --model gemini-2.0-flash-exp
 
+# Generate commit message in a specific language
+gelf commit --language japanese
+
 # Review unstaged changes (default)
 gelf review
 
@@ -168,7 +182,61 @@ gelf review --model gemini-2.0-flash-exp
 
 # Disable markdown styling in review output (for plain text)
 gelf review --no-style
+
+# Generate code review in a specific language
+gelf review --language japanese
 ```
+
+## 🌍 Language Support
+
+gelf supports generating commit messages and code reviews in multiple languages. You can configure language settings both through configuration files and command-line options.
+
+### Supported Languages
+
+While gelf can work with any language supported by Gemini models, common examples include:
+- `english` (default)
+- `japanese`
+- `spanish` 
+- `french`
+- `german`
+- `chinese`
+- `korean`
+- And many more...
+
+### Configuration Options
+
+#### 1. Command Line (Highest Priority)
+```bash
+# Set language for specific commands
+gelf commit --language japanese
+gelf review --language spanish
+
+# Use different languages for commit and review
+gelf commit --language english
+gelf review --language japanese
+```
+
+#### 2. Configuration File
+```yaml
+language: "japanese"  # Global default language
+
+commit:
+  language: "japanese"  # Language for commit messages
+
+review:
+  language: "english"   # Language for code reviews
+```
+
+#### 3. Defaults
+If no language is specified, both commit and review will use English.
+
+### Priority Order
+1. Command-line `--language` flag (highest priority)
+2. Configuration file command-specific settings (`commit.language`/`review.language`)
+3. Configuration file global setting (`language`)
+4. Default value (`english`)
+
+This allows you to set a global default language, override it for specific commands, and still override everything on a per-command basis.
 
 ## 🔧 Technical Specifications
 
@@ -234,9 +302,19 @@ vertex_ai:
   project_id: string     # Google Cloud project ID
   location: string       # Vertex AI location (default: us-central1)
 
-gelf:
-  flash_model: string    # Gemini Flash model to use (default: gemini-2.5-flash-preview-05-20)
-  pro_model: string      # Gemini Pro model to use (default: gemini-2.5-pro-preview-05-06)
+model:
+  flash: string          # Gemini Flash model to use (default: gemini-2.5-flash-preview-05-20)
+  pro: string            # Gemini Pro model to use (default: gemini-2.5-pro-preview-05-06)
+
+language: string         # Global default language (default: english)
+
+commit:
+  model: string          # Model for commits: "flash", "pro", or custom (default: flash)
+  language: string       # Language for commit messages (inherits from global if not set)
+
+review:
+  model: string          # Model for reviews: "flash", "pro", or custom (default: pro)
+  language: string       # Language for code reviews (inherits from global if not set)
 ```
 
 ### Environment Variables
@@ -250,7 +328,7 @@ gelf:
 
 *Either `GELF_CREDENTIALS` or `GOOGLE_APPLICATION_CREDENTIALS` is required. If both are set, `GELF_CREDENTIALS` takes priority.
 
-**Note**: Model configuration (flash_model and pro_model) is only available through configuration files.
+**Note**: Model configuration and language settings are only available through configuration files.
 
 ## 🔨 Development
 

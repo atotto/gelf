@@ -78,7 +78,7 @@ func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient
 	}, nil
 }
 
-func (v *VertexAIClient) GenerateCommitMessage(ctx context.Context, diff string) (string, error) {
+func (v *VertexAIClient) GenerateCommitMessage(ctx context.Context, diff string, language string) (string, error) {
 	prompt := fmt.Sprintf(`Analyze the following git diff and generate a precise commit message following the Conventional Commits specification.
 
 DIFF ANALYSIS GUIDE:
@@ -89,7 +89,7 @@ DIFF ANALYSIS GUIDE:
 5. Identify the primary purpose: new feature, bug fix, refactoring, etc.
 
 COMMIT MESSAGE REQUIREMENTS:
-1. Use English only
+1. Use %s language
 2. Follow format: <type>[optional scope]: <description>
 3. Valid types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
 4. Keep under 72 characters total
@@ -109,7 +109,7 @@ EXAMPLES:
 Git diff:
 %s
 
-Respond with only the commit message, no additional text or formatting.`, diff)
+Respond with only the commit message, no additional text or formatting.`, language, diff)
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{
@@ -139,7 +139,7 @@ Respond with only the commit message, no additional text or formatting.`, diff)
 }
 
 // ReviewCodeStructured generates a structured review with file-specific comments
-func (v *VertexAIClient) ReviewCodeStructured(ctx context.Context, diff string) (*StructuredReview, error) {
+func (v *VertexAIClient) ReviewCodeStructured(ctx context.Context, diff string, language string) (*StructuredReview, error) {
 	// First, parse the diff to extract file information
 	files := v.parseDiffFiles(diff)
 
@@ -148,7 +148,7 @@ func (v *VertexAIClient) ReviewCodeStructured(ctx context.Context, diff string) 
 
 	for _, file := range files {
 		// Generate review for each file individually
-		fileReview, err := v.reviewSingleFile(ctx, file.fileName, file.diffText)
+		fileReview, err := v.reviewSingleFile(ctx, file.fileName, file.diffText, language)
 		if err != nil {
 			// Continue with other files if one fails
 			continue
@@ -159,7 +159,7 @@ func (v *VertexAIClient) ReviewCodeStructured(ctx context.Context, diff string) 
 	}
 
 	// Generate overall summary
-	summary, err := v.generateReviewSummary(ctx, diff, allComments)
+	summary, err := v.generateReviewSummary(ctx, diff, allComments, language)
 	if err != nil {
 		summary = "Failed to generate summary"
 	}
@@ -223,8 +223,8 @@ func (v *VertexAIClient) parseDiffFiles(diff string) []struct {
 }
 
 // reviewSingleFile generates review for a single file
-func (v *VertexAIClient) reviewSingleFile(ctx context.Context, fileName, diffText string) (*FileReview, error) {
-	prompt := fmt.Sprintf(`Analyze the following git diff for file "%s" and provide specific code review comments.
+func (v *VertexAIClient) reviewSingleFile(ctx context.Context, fileName, diffText, language string) (*FileReview, error) {
+	prompt := fmt.Sprintf(`Analyze the following git diff for file "%s" and provide specific code review comments in %s language.
 
 RESPONSE REQUIREMENTS:
 1. Respond with ONLY a valid JSON object
@@ -257,7 +257,7 @@ GUIDELINES:
 - If no issues, return: {"comments": []}
 
 File diff:
-%s`, fileName, fileName, diffText)
+%s`, fileName, language, fileName, diffText)
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{
@@ -310,7 +310,7 @@ File diff:
 }
 
 // generateReviewSummary creates an overall summary of the review
-func (v *VertexAIClient) generateReviewSummary(ctx context.Context, diff string, comments []ReviewComment) (string, error) {
+func (v *VertexAIClient) generateReviewSummary(ctx context.Context, diff string, comments []ReviewComment, language string) (string, error) {
 	if len(comments) == 0 {
 		return "No significant issues found in the code changes.", nil
 	}
@@ -330,7 +330,7 @@ func (v *VertexAIClient) generateReviewSummary(ctx context.Context, diff string,
 		}
 	}
 
-	prompt := fmt.Sprintf(`Based on the following code review findings, generate a brief summary (1-2 sentences):
+	prompt := fmt.Sprintf(`Based on the following code review findings, generate a brief summary (1-2 sentences) in %s language:
 
 FINDINGS:
 - Critical issues (must fix): %d
@@ -339,7 +339,7 @@ FINDINGS:
 - Total comments: %d
 
 Provide a concise summary of the overall code quality and main areas of concern.`,
-		mustCount, wantCount, nitsCount, len(comments))
+		language, mustCount, wantCount, nitsCount, len(comments))
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{

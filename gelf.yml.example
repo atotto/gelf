@@ -12,16 +12,37 @@ vertex_ai:
   # Vertex AI region/location (default: us-central1)
   location: "us-central1"
 
-gelf:
-  # Flash model for quick tasks like commit messages (default: gemini-2.5-flash-preview-05-20)
-  flash_model: "gemini-2.5-flash-preview-05-20"
+# Model definitions
+model:
+  # Flash model for quick tasks (default: gemini-2.5-flash-preview-05-20)
+  flash: "gemini-2.5-flash-preview-05-20"
   
-  # Pro model for more complex tasks (default: gemini-2.5-pro-preview-05-06)
-  pro_model: "gemini-2.5-pro-preview-05-06"
+  # Pro model for complex tasks (default: gemini-2.5-pro-preview-05-06)
+  pro: "gemini-2.5-pro-preview-05-06"
+
+# Default language for all operations (default: english)
+# Examples: english, japanese, spanish, french, german, chinese, korean
+language: "english"
+
+# Commit-specific settings
+commit:
+  # Model to use for commit messages: "flash", "pro", or custom model name (default: flash)
+  model: "flash"
+  
+  # Language for commit messages (optional, inherits from global language if not set)
+  language: "english"
+
+# Review-specific settings
+review:
+  # Model to use for code reviews: "flash", "pro", or custom model name (default: pro)
+  model: "pro"
+  
+  # Language for code reviews (optional, inherits from global language if not set)
+  language: "english"
 
 # Configuration priority (highest to lowest):
 # 1. Environment variables (VERTEXAI_PROJECT, VERTEXAI_LOCATION)
 # 2. This configuration file
 # 3. Built-in defaults
 #
-# Note: flash_model and pro_model can only be configured via this file, not environment variables
+# Note: model definitions and language settings can only be configured via this file, not environment variables

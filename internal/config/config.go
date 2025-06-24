@@ -8,10 +8,14 @@ import (
 )
 
 type Config struct {
-	ProjectID  string `yaml:"project_id"`
-	Location   string `yaml:"location"`
-	FlashModel string `yaml:"flash_model"`
-	ProModel   string `yaml:"pro_model"`
+	ProjectID      string
+	Location       string
+	FlashModel     string
+	ProModel       string
+	CommitLanguage string
+	ReviewLanguage string
+	CommitModel    string
+	ReviewModel    string
 }
 
 type FileConfig struct {
@@ -19,10 +23,19 @@ type FileConfig struct {
 		ProjectID string `yaml:"project_id"`
 		Location  string `yaml:"location"`
 	} `yaml:"vertex_ai"`
-	Gelf struct {
-		FlashModel string `yaml:"flash_model"`
-		ProModel   string `yaml:"pro_model"`
-	} `yaml:"gelf"`
+	Model struct {
+		Flash string `yaml:"flash"`
+		Pro   string `yaml:"pro"`
+	} `yaml:"model"`
+	Language string `yaml:"language"`
+	Commit struct {
+		Model    string `yaml:"model"`
+		Language string `yaml:"language"`
+	} `yaml:"commit"`
+	Review struct {
+		Model    string `yaml:"model"`
+		Language string `yaml:"language"`
+	} `yaml:"review"`
 }
 
 func Load() (*Config, error) {
@@ -50,21 +63,74 @@ func Load() (*Config, error) {
 		location = "us-central1"
 	}
 
-	flashModel := fileConfig.Gelf.FlashModel
+	// Define model names
+	flashModel := fileConfig.Model.Flash
 	if flashModel == "" {
 		flashModel = "gemini-2.5-flash-preview-05-20"
 	}
 
-	proModel := fileConfig.Gelf.ProModel
+	proModel := fileConfig.Model.Pro
 	if proModel == "" {
 		proModel = "gemini-2.5-pro-preview-05-06"
 	}
 
+	// Default language
+	defaultLanguage := fileConfig.Language
+	if defaultLanguage == "" {
+		defaultLanguage = "english"
+	}
+
+	// Commit settings
+	commitModel := fileConfig.Commit.Model
+	if commitModel == "" {
+		commitModel = "flash" // default to flash model
+	}
+
+	commitLanguage := fileConfig.Commit.Language
+	if commitLanguage == "" {
+		commitLanguage = defaultLanguage
+	}
+
+	// Review settings
+	reviewModel := fileConfig.Review.Model
+	if reviewModel == "" {
+		reviewModel = "pro" // default to pro model
+	}
+
+	reviewLanguage := fileConfig.Review.Language
+	if reviewLanguage == "" {
+		reviewLanguage = defaultLanguage
+	}
+
+	// Resolve actual model names
+	var actualFlashModel, actualProModel string
+	if commitModel == "flash" {
+		actualFlashModel = flashModel
+	} else if commitModel == "pro" {
+		actualFlashModel = proModel
+	} else {
+		// Custom model name
+		actualFlashModel = commitModel
+	}
+
+	if reviewModel == "flash" {
+		actualProModel = flashModel
+	} else if reviewModel == "pro" {
+		actualProModel = proModel
+	} else {
+		// Custom model name
+		actualProModel = reviewModel
+	}
+
 	return &Config{
-		ProjectID:  projectID,
-		Location:   location,
-		FlashModel: flashModel,
-		ProModel:   proModel,
+		ProjectID:      projectID,
+		Location:       location,
+		FlashModel:     actualFlashModel,
+		ProModel:       actualProModel,
+		CommitLanguage: commitLanguage,
+		ReviewLanguage: reviewLanguage,
+		CommitModel:    commitModel,
+		ReviewModel:    reviewModel,
 	}, nil
 }
 

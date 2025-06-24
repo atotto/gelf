@@ -22,9 +22,10 @@ var commitCmd = &cobra.Command{
 }
 
 var (
-	dryRun bool
-	quiet  bool
-	model  string
+	dryRun         bool
+	quiet          bool
+	model          string
+	commitLanguage string
 )
 
 var warningStyle = lipgloss.NewStyle().
@@ -35,6 +36,7 @@ func init() {
 	commitCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Generate message only without committing")
 	commitCmd.Flags().BoolVar(&quiet, "quiet", false, "Don't show diff output (only with --dry-run)")
 	commitCmd.Flags().StringVar(&model, "model", "", "Override default model for this generation")
+	commitCmd.Flags().StringVar(&commitLanguage, "language", "", "Language for commit message generation (e.g., english, japanese)")
 }
 
 func runCommit(cmd *cobra.Command, args []string) error {
@@ -47,6 +49,11 @@ func runCommit(cmd *cobra.Command, args []string) error {
 
 	if model != "" {
 		cfg.FlashModel = model
+	}
+	// Note: cfg.FlashModel is already set to the configured commit model in config.Load()
+
+	if commitLanguage != "" {
+		cfg.CommitLanguage = commitLanguage
 	}
 
 	diff, err := git.GetStagedDiff()
@@ -96,7 +103,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		message, err := aiClient.GenerateCommitMessage(ctx, diff)
+		message, err := aiClient.GenerateCommitMessage(ctx, diff, cfg.CommitLanguage)
 		if err != nil {
 			return fmt.Errorf("failed to generate commit message: %w", err)
 		}
@@ -105,7 +112,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	tui := ui.NewTUI(aiClient, diff)
+	tui := ui.NewTUI(aiClient, diff, cfg.CommitLanguage)
 	if err := tui.Run(); err != nil {
 		return fmt.Errorf("TUI error: %w", err)
 	}
