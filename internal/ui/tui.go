@@ -54,7 +54,7 @@ func NewTUI(aiClient *ai.VertexAIClient, diff string, commitLanguage string) *mo
 
 	ti := textinput.New()
 	ti.Placeholder = "Enter your commit message..."
-	ti.CharLimit = 200
+	ti.CharLimit = 0
 	ti.Width = 60
 
 	diffSummary := git.ParseDiffSummary(diff)
