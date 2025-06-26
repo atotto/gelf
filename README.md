@@ -62,8 +62,8 @@ vertex_ai:
   location: "us-central1"  # optional, default: us-central1
 
 model:
-  flash: "gemini-2.5-flash-preview-05-20"  # optional
-  pro: "gemini-2.5-pro-preview-05-06"      # optional
+  flash: gemini-2.5-flash
+  pro: gemini-2.5-pro
 
 language: "english"  # optional, default: english
 
@@ -245,8 +245,8 @@ This allows you to set a global default language, override it for specific comma
 - **Commit Target**: Staged changes only (`git diff --staged`)
 - **Review Target**: Both staged (`git diff --staged`) and unstaged (`git diff`) changes
 - **AI Provider**: Vertex AI (Gemini models)
-- **Default Flash Model**: gemini-2.5-flash-preview-05-20
-- **Default Pro Model**: gemini-2.5-pro-preview-05-06
+- **Default Flash Model**: gemini-2.5-flash
+- **Default Pro Model**: gemini-2.5-pro
 - **UI Framework**: Bubble Tea (TUI)
 - **CLI Framework**: Cobra
 - **Streaming**: Real-time AI response streaming for code reviews
@@ -303,8 +303,8 @@ vertex_ai:
   location: string       # Vertex AI location (default: us-central1)
 
 model:
-  flash: string          # Gemini Flash model to use (default: gemini-2.5-flash-preview-05-20)
-  pro: string            # Gemini Pro model to use (default: gemini-2.5-pro-preview-05-06)
+  flash: string          # Gemini Flash model to use (default: gemini-2.5-flash)
+  pro: string            # Gemini Pro model to use (default: gemini-2.5-pro)
 
 language: string         # Global default language (default: english)
 

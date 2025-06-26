@@ -56,8 +56,8 @@ main.go               # アプリケーションエントリーポイント
 - **コミット対象**: ステージング済み変更のみ (`git diff --staged`)
 - **レビュー対象**: ステージング済み (`git diff --staged`) または未ステージ (`git diff`) 変更
 - **AIプロバイダー**: Vertex AI (Geminiモデル)
-- **デフォルトFlashモデル**: gemini-2.5-flash-preview-05-20
-- **デフォルトProモデル**: gemini-2.5-pro-preview-05-06
+- **デフォルトFlashモデル**: gemini-2.5-flash
+- **デフォルトProモデル**: gemini-2.5-pro
 - **モデル設定**: 設定ファイル（gelf.yml）で変更可能
 - **入力**: 生のgit diff出力 (フィルタリングなし)
 - **UIフレームワーク**: Bubble Tea (TUI用)
@@ -115,7 +115,7 @@ go run main.go review --staged   # ステージング済み変更のレビュー
 アプリケーションには以下のVertex AI設定が必要です：
 - Google Cloud プロジェクトID
 - Vertex AI API認証情報
-- モデル選択 (デフォルト: gemini-2.5-flash-preview-05-20)
+- モデル選択 (デフォルト: gemini-2.5-flash)
 
 ### 設定ファイル
 
@@ -131,9 +131,9 @@ vertex_ai:
   project_id: "your-gcp-project-id"
   location: "us-central1"
 
-gelf:
-  flash_model: "gemini-2.5-flash-preview-05-20"  # 高速処理用モデル
-  pro_model: "gemini-2.5-pro-preview-05-06"       # 高品質処理用モデル
+model:
+  flash: "gemini-2.5-flash"  # 高速処理用モデル
+  pro: "gemini-2.5-pro"       # 高品質処理用モデル
 ```
 
 設定の優先順位（高い順）：

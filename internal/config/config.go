@@ -28,7 +28,7 @@ type FileConfig struct {
 		Pro   string `yaml:"pro"`
 	} `yaml:"model"`
 	Language string `yaml:"language"`
-	Commit struct {
+	Commit   struct {
 		Model    string `yaml:"model"`
 		Language string `yaml:"language"`
 	} `yaml:"commit"`
@@ -66,12 +66,12 @@ func Load() (*Config, error) {
 	// Define model names
 	flashModel := fileConfig.Model.Flash
 	if flashModel == "" {
-		flashModel = "gemini-2.5-flash-preview-05-20"
+		flashModel = "gemini-2.5-flash"
 	}
 
 	proModel := fileConfig.Model.Pro
 	if proModel == "" {
-		proModel = "gemini-2.5-pro-preview-05-06"
+		proModel = "gemini-2.5-pro"
 	}
 
 	// Default language
