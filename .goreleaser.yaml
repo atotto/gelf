@@ -2,6 +2,16 @@ version: 2
 
 project_name: gelf
 
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    ldflags:
+      - -s -w -X github.com/EkeMinusYou/gelf/cmd.version={{.Version}}
+
 homebrew_casks:
   - repository:
       owner: EkeMinusYou

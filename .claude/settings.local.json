@@ -20,7 +20,8 @@
       "Bash(rm:*)",
       "Bash(go run:*)",
       "Bash(./gelf version)",
-      "Bash(./gelf:*)"
+      "Bash(./gelf:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }

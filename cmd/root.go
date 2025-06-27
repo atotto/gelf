@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -21,8 +23,26 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of gelf",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version)
+		if version == "dev" {
+			// Try to get git commit hash when installed via go install
+			if hash := getGitCommitHash(); hash != "" {
+				fmt.Println(hash)
+			} else {
+				fmt.Println(version)
+			}
+		} else {
+			fmt.Println(version)
+		}
 	},
+}
+
+func getGitCommitHash() string {
+	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func Execute() error {
