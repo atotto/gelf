@@ -1,16 +1,28 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
+
+// version will be set at build time via ldflags
+var version = "dev"
 
 var rootCmd = &cobra.Command{
 	Use:   "gelf",
 	Short: "AI-powered Git commit message generator using Vertex AI (Gemini)",
 	Long: `gelf is a CLI tool that generates Git commit messages using Vertex AI (Gemini).
 It analyzes staged changes and creates appropriate commit messages through an interactive TUI.`,
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of gelf",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(version)
+	},
 }
 
 func Execute() error {
@@ -20,6 +32,7 @@ func Execute() error {
 func init() {
 	rootCmd.AddCommand(commitCmd)
 	rootCmd.AddCommand(reviewCmd)
+	rootCmd.AddCommand(versionCmd)
 
 	// Add completion commands
 	rootCmd.AddCommand(&cobra.Command{

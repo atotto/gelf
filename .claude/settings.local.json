@@ -18,7 +18,9 @@
       "Bash(go test:*)",
       "Bash(go list:*)",
       "Bash(rm:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(./gelf version)",
+      "Bash(./gelf:*)"
     ],
     "deny": []
   }
