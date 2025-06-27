@@ -28,8 +28,6 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
-    files:
-      - completions/*
 
 checksum:
   name_template: 'checksums.txt'
