@@ -11,10 +11,6 @@ homebrew_casks:
     description: "AI-powered Git commit message generator using Vertex AI (Gemini)"
     homepage: "https://github.com/EkeMinusYou/gelf"
     license: MIT
-    completions:
-      bash: completions/gelf.bash
-      zsh: completions/gelf.zsh
-      fish: completions/gelf.fish
 
 archives:
   - formats: [tar.gz]
