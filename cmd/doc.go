@@ -10,8 +10,8 @@ import (
 	"github.com/EkeMinusYou/gelf/internal/ai"
 	"github.com/EkeMinusYou/gelf/internal/config"
 	"github.com/EkeMinusYou/gelf/internal/doc"
+	"github.com/EkeMinusYou/gelf/internal/ui"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -31,10 +31,6 @@ var (
 	docLanguage string
 )
 
-
-var docSuccessStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("2")). // グリーン
-	Bold(true)
 
 func init() {
 	docCmd.Flags().StringVarP(&docSrc, "src", "s", "", "Source directory or file to analyze (required)")
@@ -104,34 +100,11 @@ func runDoc(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create analyzer: %w", err)
 	}
 
-	fmt.Printf("Analyzing source code at: %s\n", docSrc)
-	fmt.Printf("Generating %s documentation...\n", docTemplate)
-
-	// ソースコードの分析
-	sourceInfo, err := analyzer.Analyze()
-	if err != nil {
-		return fmt.Errorf("failed to analyze source code: %w", err)
-	}
-
-	// ドキュメント生成
-	documentation, err := aiClient.GenerateDocumentation(ctx, sourceInfo, docTemplate, cfg.ReviewLanguage)
-	if err != nil {
+	// TUIを使用してローディングアニメーション付きで処理
+	docTUI := ui.NewDocTUI(analyzer, aiClient, docTemplate, docFormat, docDst, cfg.ReviewLanguage)
+	if err := docTUI.Run(); err != nil {
 		return fmt.Errorf("failed to generate documentation: %w", err)
 	}
-
-	// 出力フォーマットの変換
-	output, err := doc.FormatOutput(documentation, docFormat)
-	if err != nil {
-		return fmt.Errorf("failed to format output: %w", err)
-	}
-
-	// ファイルへの書き込み
-	if err := os.WriteFile(docDst, []byte(output), 0644); err != nil {
-		return fmt.Errorf("failed to write output file: %w", err)
-	}
-
-	message := docSuccessStyle.Render(fmt.Sprintf("✓ Documentation generated successfully: %s", docDst))
-	fmt.Println(message)
 
 	return nil
 }

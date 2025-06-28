@@ -3,9 +3,11 @@ package ui
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/EkeMinusYou/gelf/internal/ai"
+	"github.com/EkeMinusYou/gelf/internal/doc"
 	"github.com/EkeMinusYou/gelf/internal/git"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -427,6 +429,196 @@ func (m *reviewModel) Run() (string, error) {
 	}
 
 	return "", err
+}
+
+// Documentation TUI model
+type docModel struct {
+	analyzer       *doc.Analyzer
+	aiClient       *ai.VertexAIClient
+	template       string
+	format         string
+	outputPath     string
+	sourceInfo     *doc.SourceInfo
+	documentation  string
+	err            error
+	state          docState
+	spinner        spinner.Model
+	language       string
+}
+
+type docState int
+
+const (
+	docStateAnalyzing docState = iota
+	docStateGenerating
+	docStateWriting
+	docStateSuccess
+	docStateError
+)
+
+type msgSourceAnalyzed struct {
+	sourceInfo *doc.SourceInfo
+	err        error
+}
+
+type msgDocumentationGenerated struct {
+	documentation string
+	err           error
+}
+
+type msgDocumentationWritten struct {
+	err error
+}
+
+func NewDocTUI(analyzer *doc.Analyzer, aiClient *ai.VertexAIClient, template, format, outputPath, language string) *docModel {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = loadingStyle
+
+	return &docModel{
+		analyzer:   analyzer,
+		aiClient:   aiClient,
+		template:   template,
+		format:     format,
+		outputPath: outputPath,
+		state:      docStateAnalyzing,
+		spinner:    s,
+		language:   language,
+	}
+}
+
+func (m *docModel) Init() tea.Cmd {
+	return tea.Batch(m.spinner.Tick, m.analyzeSource())
+}
+
+func (m *docModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch m.state {
+		case docStateAnalyzing, docStateGenerating, docStateWriting:
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
+		case docStateSuccess, docStateError:
+			return m, tea.Quit
+		}
+
+	case msgSourceAnalyzed:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = docStateError
+			return m, tea.Quit
+		}
+		m.sourceInfo = msg.sourceInfo
+		m.state = docStateGenerating
+		return m, m.generateDocumentation()
+
+	case msgDocumentationGenerated:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = docStateError
+			return m, tea.Quit
+		}
+		m.documentation = msg.documentation
+		m.state = docStateWriting
+		return m, m.writeDocumentation()
+
+	case msgDocumentationWritten:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = docStateError
+		} else {
+			m.state = docStateSuccess
+		}
+		return m, tea.Quit
+	}
+
+	// Update spinner
+	if m.state == docStateAnalyzing || m.state == docStateGenerating || m.state == docStateWriting {
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m *docModel) View() string {
+	switch m.state {
+	case docStateAnalyzing:
+		return fmt.Sprintf("%s %s",
+			m.spinner.View(),
+			loadingStyle.Render("Analyzing source code..."))
+
+	case docStateGenerating:
+		return fmt.Sprintf("%s %s",
+			m.spinner.View(),
+			loadingStyle.Render(fmt.Sprintf("Generating %s documentation...", m.template)))
+
+	case docStateWriting:
+		return fmt.Sprintf("%s %s",
+			m.spinner.View(),
+			loadingStyle.Render("Writing documentation file..."))
+
+	case docStateSuccess:
+		return successStyle.Render(fmt.Sprintf("✓ Documentation generated successfully: %s", m.outputPath))
+
+	case docStateError:
+		return errorStyle.Render(fmt.Sprintf("✗ Error: %v", m.err))
+	}
+
+	return ""
+}
+
+func (m *docModel) Run() error {
+	p := tea.NewProgram(m)
+	_, err := p.Run()
+
+	if m.err != nil {
+		return m.err
+	}
+
+	// Print success message after TUI exits
+	if m.state == docStateSuccess {
+		fmt.Printf("%s\n", successStyle.Render(fmt.Sprintf("✓ Documentation generated successfully: %s", m.outputPath)))
+	}
+
+	return err
+}
+
+func (m *docModel) analyzeSource() tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		sourceInfo, err := m.analyzer.Analyze()
+		return msgSourceAnalyzed{
+			sourceInfo: sourceInfo,
+			err:        err,
+		}
+	})
+}
+
+func (m *docModel) generateDocumentation() tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		ctx := context.Background()
+		documentation, err := m.aiClient.GenerateDocumentation(ctx, m.sourceInfo, m.template, m.language)
+		return msgDocumentationGenerated{
+			documentation: documentation,
+			err:           err,
+		}
+	})
+}
+
+func (m *docModel) writeDocumentation() tea.Cmd {
+	return tea.Cmd(func() tea.Msg {
+		output, err := doc.FormatOutput(m.documentation, m.format)
+		if err != nil {
+			return msgDocumentationWritten{err: err}
+		}
+
+		err = os.WriteFile(m.outputPath, []byte(output), 0644)
+		return msgDocumentationWritten{err: err}
+	})
 }
 
 // generateStructuredReview generates a structured review
