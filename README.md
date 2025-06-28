@@ -144,6 +144,34 @@ The review feature provides:
    - Performance and maintainability suggestions
    - No interactive prompts - displays results directly
 
+### Documentation Generation
+
+Generate AI-powered documentation for your codebase:
+
+```bash
+# Generate README documentation
+gelf doc --src . --dst README.md --template readme
+
+# Generate API documentation 
+gelf doc --src ./api --dst docs/api.md --template api
+
+# Generate architecture documentation
+gelf doc --src . --dst docs/architecture.md --template architecture
+
+# Generate changelog from git history
+gelf doc --src . --dst CHANGELOG.md --template changelog
+
+# Generate Go-style documentation
+gelf doc --src ./pkg --dst docs/godoc.md --template godoc
+```
+
+The documentation feature provides:
+   - AI-powered analysis of source code structure
+   - Multiple documentation templates (readme, api, changelog, architecture, godoc)
+   - Support for multiple output formats (markdown, html, json)
+   - Interactive TUI with progress indicators
+   - Customizable language output
+
 ### Command Options
 
 ```bash
@@ -185,11 +213,23 @@ gelf review --no-style
 
 # Generate code review in a specific language
 gelf review --language japanese
+
+# Generate documentation
+gelf doc --src . --dst README.md --template readme
+
+# Generate documentation with specific format
+gelf doc --src ./src --dst docs/api.html --template api --format html
+
+# Generate documentation with specific model and language
+gelf doc --src . --dst README_JP.md --template readme --model gemini-2.0-flash-exp --language japanese
+
+# Show documentation command help
+gelf doc --help
 ```
 
 ## 🌍 Language Support
 
-gelf supports generating commit messages and code reviews in multiple languages. You can configure language settings both through configuration files and command-line options.
+gelf supports generating commit messages, code reviews, and documentation in multiple languages. You can configure language settings both through configuration files and command-line options.
 
 ### Supported Languages
 
@@ -210,10 +250,12 @@ While gelf can work with any language supported by Gemini models, common example
 # Set language for specific commands
 gelf commit --language japanese
 gelf review --language spanish
+gelf doc --src . --dst README.md --template readme --language french
 
-# Use different languages for commit and review
+# Use different languages for different operations
 gelf commit --language english
 gelf review --language japanese
+gelf doc --src . --dst docs/README_ES.md --template readme --language spanish
 ```
 
 #### 2. Configuration File
@@ -225,14 +267,17 @@ commit:
 
 review:
   language: "english"   # Language for code reviews
+
+doc:
+  language: "english"   # Language for documentation generation
 ```
 
 #### 3. Defaults
-If no language is specified, both commit and review will use English.
+If no language is specified, commit, review, and documentation generation will use English.
 
 ### Priority Order
 1. Command-line `--language` flag (highest priority)
-2. Configuration file command-specific settings (`commit.language`/`review.language`)
+2. Configuration file command-specific settings (`commit.language`/`review.language`/`doc.language`)
 3. Configuration file global setting (`language`)
 4. Default value (`english`)
 
@@ -257,14 +302,17 @@ This allows you to set a global default language, override it for specific comma
 cmd/
 ├── root.go          # Root command definition
 ├── commit.go        # Commit command implementation
-└── review.go        # Review command implementation
+├── review.go        # Review command implementation
+└── doc.go           # Documentation generation command implementation
 internal/
 ├── git/
 │   └── diff.go      # Git operations (staged and unstaged diffs)
 ├── ai/
-│   └── vertex.go    # Vertex AI integration (commit messages and code review)
+│   └── vertex.go    # Vertex AI integration (commit messages, code review, and documentation)
 ├── ui/
-│   └── tui.go       # Bubble Tea TUI implementation (commit and review)
+│   └── tui.go       # Bubble Tea TUI implementation (commit, review, and documentation)
+├── doc/
+│   └── analyzer.go  # Source code analysis for documentation generation
 └── config/
     └── config.go    # Configuration management (API keys etc)
 main.go             # Application entry point
@@ -282,6 +330,11 @@ The application provides a clean, interactive terminal interface:
 ### Review Workflow  
 - Real-time streaming AI analysis display
 - Comprehensive code review feedback without interactive prompts
+
+### Documentation Workflow
+- Loading indicator while analyzing source code
+- Real-time progress updates during AI document generation
+- Success confirmation with output file location
 
 The interface features color-coded states, animated progress indicators, and intuitive keyboard controls for a smooth user experience.
 
@@ -315,6 +368,10 @@ commit:
 review:
   model: string          # Model for reviews: "flash", "pro", or custom (default: pro)
   language: string       # Language for code reviews (inherits from global if not set)
+
+doc:
+  model: string          # Model for documentation: "flash", "pro", or custom (default: pro)
+  language: string       # Language for documentation generation (inherits from global if not set)
 ```
 
 ### Environment Variables
@@ -358,6 +415,7 @@ go run main.go commit        # Run commit command in development
 go run main.go commit --dry-run  # Run message generation only
 go run main.go review        # Run review command in development
 go run main.go review --staged  # Run review for staged changes
+go run main.go doc --src . --dst README.md --template readme  # Run documentation generation
 ```
 
 ## 📦 Dependencies
