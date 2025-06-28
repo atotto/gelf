@@ -52,6 +52,7 @@ func Execute() error {
 func init() {
 	rootCmd.AddCommand(commitCmd)
 	rootCmd.AddCommand(reviewCmd)
+	rootCmd.AddCommand(docCmd)
 	rootCmd.AddCommand(versionCmd)
 
 	// Add completion commands

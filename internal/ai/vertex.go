@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/EkeMinusYou/gelf/internal/config"
+	"github.com/EkeMinusYou/gelf/internal/doc"
 
 	"google.golang.org/genai"
 )
@@ -362,6 +363,251 @@ Provide a concise summary of the overall code quality and main areas of concern.
 
 	part := resp.Candidates[0].Content.Parts[0]
 	return strings.TrimSpace(part.Text), nil
+}
+
+func (v *VertexAIClient) GenerateDocumentation(ctx context.Context, sourceInfo *doc.SourceInfo, template, language string) (string, error) {
+	prompt, err := v.buildDocumentationPrompt(sourceInfo, template, language)
+	if err != nil {
+		return "", fmt.Errorf("failed to build prompt: %w", err)
+	}
+
+	resp, err := v.client.Models.GenerateContent(ctx, v.proModel,
+		[]*genai.Content{
+			genai.NewUserContentFromText(prompt),
+		},
+		&genai.GenerateContentConfig{
+			Temperature: genai.Ptr(float32(0.3)),
+		})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate documentation: %w", err)
+	}
+
+	if len(resp.Candidates) == 0 {
+		return "", fmt.Errorf("no candidates in response")
+	}
+
+	if len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no content parts in response")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	if part.Text == "" {
+		return "", fmt.Errorf("empty text in response part")
+	}
+
+	return part.Text, nil
+}
+
+func (v *VertexAIClient) buildDocumentationPrompt(sourceInfo *doc.SourceInfo, template, language string) (string, error) {
+	var basePrompt string
+
+	switch template {
+	case "readme":
+		basePrompt = v.buildReadmePrompt(sourceInfo, language)
+	case "api":
+		basePrompt = v.buildAPIPrompt(sourceInfo, language)
+	case "changelog":
+		basePrompt = v.buildChangelogPrompt(sourceInfo, language)
+	case "architecture":
+		basePrompt = v.buildArchitecturePrompt(sourceInfo, language)
+	case "godoc":
+		basePrompt = v.buildGodocPrompt(sourceInfo, language)
+	default:
+		return "", fmt.Errorf("unsupported template: %s", template)
+	}
+
+	return basePrompt, nil
+}
+
+func (v *VertexAIClient) buildReadmePrompt(sourceInfo *doc.SourceInfo, language string) string {
+	sourceCode := v.formatSourceCode(sourceInfo)
+
+	return fmt.Sprintf(`Generate a comprehensive README.md for this project in %s language.
+
+PROJECT ANALYSIS:
+Languages: %s
+File count: %d
+Project structure:
+%s
+
+SOURCE CODE ANALYSIS:
+%s
+
+REQUIREMENTS:
+1. Write in %s language
+2. Include project title and description
+3. Add installation instructions
+4. Provide usage examples
+5. Include API documentation if applicable
+6. Add contribution guidelines
+7. Include license information
+8. Use proper Markdown formatting
+9. Be comprehensive but concise
+10. Focus on what users need to know
+
+Generate a complete README.md that follows best practices and provides all necessary information for users and contributors.`,
+		language,
+		strings.Join(sourceInfo.Languages, ", "),
+		len(sourceInfo.Files),
+		sourceInfo.Structure,
+		sourceCode,
+		language)
+}
+
+func (v *VertexAIClient) buildAPIPrompt(sourceInfo *doc.SourceInfo, language string) string {
+	sourceCode := v.formatSourceCode(sourceInfo)
+
+	return fmt.Sprintf(`Generate comprehensive API documentation for this project in %s language.
+
+PROJECT ANALYSIS:
+Languages: %s
+File count: %d
+
+SOURCE CODE ANALYSIS:
+%s
+
+REQUIREMENTS:
+1. Write in %s language
+2. Document all public functions, methods, and classes
+3. Include parameter descriptions and types
+4. Provide return value documentation
+5. Add usage examples for each API
+6. Include error handling information
+7. Group related functions together
+8. Use proper Markdown formatting
+9. Include authentication requirements if applicable
+10. Provide complete endpoint documentation if it's a web API
+
+Generate detailed API documentation that developers can use to understand and integrate with this codebase.`,
+		language,
+		strings.Join(sourceInfo.Languages, ", "),
+		len(sourceInfo.Files),
+		sourceCode,
+		language)
+}
+
+func (v *VertexAIClient) buildChangelogPrompt(sourceInfo *doc.SourceInfo, language string) string {
+	return fmt.Sprintf(`Generate a CHANGELOG.md template for this project in %s language.
+
+PROJECT ANALYSIS:
+Languages: %s
+File count: %d
+Project structure:
+%s
+
+REQUIREMENTS:
+1. Write in %s language
+2. Follow Keep a Changelog format
+3. Include sections for different version types
+4. Add categories: Added, Changed, Deprecated, Removed, Fixed, Security
+5. Provide examples of how to document changes
+6. Include unreleased section
+7. Use proper Markdown formatting
+8. Include guidelines for maintaining the changelog
+
+Generate a comprehensive CHANGELOG.md template that the team can use to track project changes.`,
+		language,
+		strings.Join(sourceInfo.Languages, ", "),
+		len(sourceInfo.Files),
+		sourceInfo.Structure,
+		language)
+}
+
+func (v *VertexAIClient) buildArchitecturePrompt(sourceInfo *doc.SourceInfo, language string) string {
+	sourceCode := v.formatSourceCode(sourceInfo)
+
+	return fmt.Sprintf(`Generate comprehensive architecture documentation for this project in %s language.
+
+PROJECT ANALYSIS:
+Languages: %s
+File count: %d
+Project structure:
+%s
+
+SOURCE CODE ANALYSIS:
+%s
+
+REQUIREMENTS:
+1. Write in %s language
+2. Describe overall system architecture
+3. Document key components and their responsibilities
+4. Explain data flow and interactions
+5. Include design patterns used
+6. Document external dependencies
+7. Describe security considerations
+8. Include deployment architecture if applicable
+9. Use proper Markdown formatting with diagrams in text format
+10. Explain design decisions and trade-offs
+
+Generate detailed architecture documentation that helps developers understand the system design and implementation.`,
+		language,
+		strings.Join(sourceInfo.Languages, ", "),
+		len(sourceInfo.Files),
+		sourceInfo.Structure,
+		sourceCode,
+		language)
+}
+
+func (v *VertexAIClient) buildGodocPrompt(sourceInfo *doc.SourceInfo, language string) string {
+	sourceCode := v.formatSourceCode(sourceInfo)
+
+	return fmt.Sprintf(`Generate Go package documentation in godoc style using %s language.
+
+PROJECT ANALYSIS:
+Languages: %s
+File count: %d
+
+SOURCE CODE ANALYSIS:
+%s
+
+REQUIREMENTS:
+1. Write in %s language
+2. Follow Go documentation conventions
+3. Document all exported functions, types, and variables
+4. Include package-level documentation
+5. Provide clear examples for complex functions
+6. Use proper godoc formatting
+7. Include usage examples that can be run as tests
+8. Document any interfaces and their implementations
+9. Explain package purpose and design
+10. Include performance notes where relevant
+
+Generate comprehensive Go package documentation that follows Go community standards.`,
+		language,
+		strings.Join(sourceInfo.Languages, ", "),
+		len(sourceInfo.Files),
+		sourceCode,
+		language)
+}
+
+func (v *VertexAIClient) formatSourceCode(sourceInfo *doc.SourceInfo) string {
+	var result strings.Builder
+	
+	result.WriteString(fmt.Sprintf("Summary: %s\n\n", sourceInfo.Summary))
+	
+	// 重要なファイルのみを含める（サイズ制限）
+	maxFiles := 10
+	includedFiles := 0
+	
+	for _, file := range sourceInfo.Files {
+		if includedFiles >= maxFiles {
+			result.WriteString("... (additional files truncated for brevity)\n")
+			break
+		}
+		
+		// 大きなファイルは要約
+		if len(file.Content) > 2000 {
+			result.WriteString(fmt.Sprintf("File: %s (%s, %d bytes)\n", file.Path, file.Language, file.Size))
+			result.WriteString(fmt.Sprintf("Content: %s...\n\n", file.Content[:2000]))
+		} else {
+			result.WriteString(fmt.Sprintf("File: %s (%s)\n", file.Path, file.Language))
+			result.WriteString(fmt.Sprintf("Content:\n%s\n\n", file.Content))
+		}
+		
+		includedFiles++
+	}
+	
+	return result.String()
 }
 
 func (v *VertexAIClient) Close() error {
