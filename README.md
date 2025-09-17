@@ -201,6 +201,9 @@ gelf commit --model gemini-2.0-flash-exp
 # Generate commit message in a specific language
 gelf commit --language japanese
 
+# Automatically approve commit message
+gelf commit --yes
+
 # Review unstaged changes (default)
 gelf review
 

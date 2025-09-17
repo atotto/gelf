@@ -25,6 +25,7 @@ var (
 	quiet          bool
 	model          string
 	commitLanguage string
+	yesFlag        bool
 )
 
 var warningStyle = lipgloss.NewStyle().
@@ -36,6 +37,7 @@ func init() {
 	commitCmd.Flags().BoolVar(&quiet, "quiet", false, "Don't show diff output (only with --dry-run)")
 	commitCmd.Flags().StringVar(&model, "model", "", "Override default model for this generation")
 	commitCmd.Flags().StringVar(&commitLanguage, "language", "", "Language for commit message generation (e.g., english, japanese)")
+	commitCmd.Flags().BoolVar(&yesFlag, "yes", false, "Automatically approve commit message without interactive confirmation")
 }
 
 func runCommit(cmd *cobra.Command, args []string) error {
@@ -112,6 +114,25 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Print(message)
+		return nil
+	}
+
+	// Handle --yes flag: automatically approve and commit
+	if yesFlag {
+		message, err := aiClient.GenerateCommitMessage(ctx, diff, cfg.CommitLanguage)
+		if err != nil {
+			return fmt.Errorf("failed to generate commit message: %w", err)
+		}
+
+		// Display the generated commit message
+		fmt.Printf("Generated commit message:\n%s\n\n", message)
+
+		// Commit the changes
+		if err := git.CommitChanges(message); err != nil {
+			return fmt.Errorf("failed to commit changes: %w", err)
+		}
+
+		fmt.Println("✅ Successfully committed changes!")
 		return nil
 	}
 
