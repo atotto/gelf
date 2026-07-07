@@ -48,6 +48,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 	printEnvVar("VERTEXAI_PROJECT")
 	printEnvVar("GOOGLE_CLOUD_PROJECT")
 	printEnvVar("VERTEXAI_LOCATION")
+	printEnvVar("CLOUDSDK_AUTH_ACCESS_TOKEN")
 	printEnvVar("GELF_CREDENTIALS")
 	printEnvVar("GOOGLE_APPLICATION_CREDENTIALS")
 

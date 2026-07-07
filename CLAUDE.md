@@ -138,7 +138,8 @@ devcontainerの設定：
 - `GOPROXY=direct`
 - `GOPRIVATE=github.com/groove-x`
 
-アプリケーションの環境変数：
+アプリケーションの環境変数（認証の優先順位順）：
+- `CLOUDSDK_AUTH_ACCESS_TOKEN` - `gcloud auth print-access-token` の出力を設定すると認証に使用（最優先）
 - `GELF_CREDENTIALS` - サービスアカウントキーへのパス（GOOGLE_APPLICATION_CREDENTIALSより優先）
 - `GOOGLE_APPLICATION_CREDENTIALS` - サービスアカウントキーへのパス
 - `VERTEXAI_PROJECT` - Google CloudプロジェクトID

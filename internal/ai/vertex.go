@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -36,33 +37,44 @@ type VertexAIClient struct {
 }
 
 func NewVertexAIClient(ctx context.Context, cfg *config.Config) (*VertexAIClient, error) {
-	// Check for GELF_CREDENTIALS first, then fall back to GOOGLE_APPLICATION_CREDENTIALS
-	credentialsPath := os.Getenv("GELF_CREDENTIALS")
-	if credentialsPath == "" {
-		credentialsPath = os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-	}
-
-	// If we have a credentials path, set it as GOOGLE_APPLICATION_CREDENTIALS
-	// since genai.NewClient uses this environment variable internally
-	if credentialsPath != "" {
-		originalCreds := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath)
-
-		// Restore original credentials after client creation
-		defer func() {
-			if originalCreds != "" {
-				os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", originalCreds)
-			} else {
-				os.Unsetenv("GOOGLE_APPLICATION_CREDENTIALS")
-			}
-		}()
-	}
-
-	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+	clientConfig := &genai.ClientConfig{
 		Project:  cfg.ProjectID,
 		Location: cfg.Location,
 		Backend:  genai.BackendVertexAI,
-	})
+	}
+
+	if accessToken := os.Getenv("CLOUDSDK_AUTH_ACCESS_TOKEN"); accessToken != "" {
+		clientConfig.HTTPClient = &http.Client{
+			Transport: &bearerTokenTransport{
+				token: accessToken,
+				base:  http.DefaultTransport,
+			},
+		}
+	} else {
+		// Check for GELF_CREDENTIALS first, then fall back to GOOGLE_APPLICATION_CREDENTIALS
+		credentialsPath := os.Getenv("GELF_CREDENTIALS")
+		if credentialsPath == "" {
+			credentialsPath = os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+		}
+
+		// If we have a credentials path, set it as GOOGLE_APPLICATION_CREDENTIALS
+		// since genai.NewClient uses this environment variable internally
+		if credentialsPath != "" {
+			originalCreds := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+			os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath)
+
+			// Restore original credentials after client creation
+			defer func() {
+				if originalCreds != "" {
+					os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", originalCreds)
+				} else {
+					os.Unsetenv("GOOGLE_APPLICATION_CREDENTIALS")
+				}
+			}()
+		}
+	}
+
+	client, err := genai.NewClient(ctx, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Vertex AI client: %w", err)
 	}
@@ -215,9 +227,8 @@ PR_TEMPLATE:
 	}
 
 	text := strings.TrimSpace(part.Text)
-	if strings.HasPrefix(text, "```json") {
-		text = strings.TrimPrefix(text, "```json")
-		text = strings.TrimSuffix(text, "```")
+	if after, ok := strings.CutPrefix(text, "```json"); ok {
+		text = strings.TrimSuffix(after, "```")
 		text = strings.TrimSpace(text)
 	}
 
@@ -240,6 +251,17 @@ PR_TEMPLATE:
 
 func (v *VertexAIClient) Close() error {
 	return nil
+}
+
+type bearerTokenTransport struct {
+	token string
+	base  http.RoundTripper
+}
+
+func (t *bearerTokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("Authorization", "Bearer "+t.token)
+	return t.base.RoundTrip(req)
 }
 
 func customInstructionsSection(instructions string) string {
