@@ -8,19 +8,20 @@ import (
 )
 
 type Config struct {
-	ProjectID       string
-	Location        string
-	FlashModel      string
-	ProModel        string
-	BaseFlashModel  string
-	BaseProModel    string
-	CommitLanguage  string
-	CommitModel     string
-	PRLanguage      string
-	PRTitleLanguage string
-	PRBodyLanguage  string
-	PRModel         string
-	Color           string
+	ProjectID            string
+	Location             string
+	FlashModel           string
+	ProModel             string
+	BaseFlashModel       string
+	BaseProModel         string
+	CommitLanguage       string
+	CommitModel          string
+	PRLanguage           string
+	PRTitleLanguage      string
+	PRBodyLanguage       string
+	PRModel              string
+	PRCustomInstructions string
+	Color                string
 }
 
 type FileConfig struct {
@@ -39,10 +40,11 @@ type FileConfig struct {
 		Language string `yaml:"language"`
 	} `yaml:"commit"`
 	PR struct {
-		Model         string `yaml:"model"`
-		Language      string `yaml:"language"`
-		TitleLanguage string `yaml:"title_language"`
-		BodyLanguage  string `yaml:"body_language"`
+		Model              string `yaml:"model"`
+		Language           string `yaml:"language"`
+		TitleLanguage      string `yaml:"title_language"`
+		BodyLanguage       string `yaml:"body_language"`
+		CustomInstructions string `yaml:"custom_instructions"`
 	} `yaml:"pr"`
 }
 
@@ -140,19 +142,20 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		ProjectID:       projectID,
-		Location:        location,
-		FlashModel:      actualFlashModel,
-		ProModel:        proModel,
-		BaseFlashModel:  flashModel,
-		BaseProModel:    proModel,
-		CommitLanguage:  commitLanguage,
-		CommitModel:     commitModel,
-		PRLanguage:      prLanguage,
-		PRTitleLanguage: prTitleLanguage,
-		PRBodyLanguage:  prBodyLanguage,
-		PRModel:         prModel,
-		Color:           color,
+		ProjectID:            projectID,
+		Location:             location,
+		FlashModel:           actualFlashModel,
+		ProModel:             proModel,
+		BaseFlashModel:       flashModel,
+		BaseProModel:         proModel,
+		CommitLanguage:       commitLanguage,
+		CommitModel:          commitModel,
+		PRLanguage:           prLanguage,
+		PRTitleLanguage:      prTitleLanguage,
+		PRBodyLanguage:       prBodyLanguage,
+		PRModel:              prModel,
+		PRCustomInstructions: fileConfig.PR.CustomInstructions,
+		Color:                color,
 	}, nil
 }
 

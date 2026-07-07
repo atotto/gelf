@@ -48,6 +48,13 @@ pr:
   # Optional: Override language for PR body only (inherits from pr.language if not set)
   # body_language: "japanese"
 
+  # Optional: Custom instructions injected into the AI prompt for PR generation
+  # Use this to enforce style rules or formatting conventions.
+  # Examples:
+  #   custom_instructions: "Use noun-ending style (体言止め) for all bullet points."
+  #   custom_instructions: "Always include a 'Background' section explaining why this change is needed."
+  # custom_instructions: ""
+
 # Configuration priority (highest to lowest):
 # 1. Environment variables (VERTEXAI_PROJECT, VERTEXAI_LOCATION)
 # 2. This configuration file

@@ -12,15 +12,16 @@ import (
 )
 
 type PullRequestInput struct {
-	BaseBranch    string
-	HeadBranch    string
-	CommitLog     string
-	DiffStat      string
-	Diff          string
-	Template      string
-	Language      string
-	TitleLanguage string
-	BodyLanguage  string
+	BaseBranch         string
+	HeadBranch         string
+	CommitLog          string
+	DiffStat           string
+	Diff               string
+	Template           string
+	Language           string
+	TitleLanguage      string
+	BodyLanguage       string
+	CustomInstructions string
 }
 
 type PullRequestContent struct {
@@ -172,7 +173,7 @@ BODY REQUIREMENTS:
 - Replace placeholder text with concrete details.
 - If testing information is unknown, explicitly say tests were not run.
 - If PR_TEMPLATE is "NONE", use sections: Summary, Changes, Testing.
-
+%s
 BASE BRANCH: %s
 HEAD BRANCH: %s
 
@@ -187,7 +188,7 @@ DIFF:
 
 PR_TEMPLATE:
 %s
-`, titleLanguage, bodyLanguage, input.BaseBranch, input.HeadBranch, input.CommitLog, input.DiffStat, input.Diff, template)
+`, titleLanguage, bodyLanguage, customInstructionsSection(input.CustomInstructions), input.BaseBranch, input.HeadBranch, input.CommitLog, input.DiffStat, input.Diff, template)
 
 	resp, err := v.client.Models.GenerateContent(ctx, v.flashModel,
 		[]*genai.Content{
@@ -239,4 +240,12 @@ PR_TEMPLATE:
 
 func (v *VertexAIClient) Close() error {
 	return nil
+}
+
+func customInstructionsSection(instructions string) string {
+	trimmed := strings.TrimSpace(instructions)
+	if trimmed == "" {
+		return ""
+	}
+	return "\nCUSTOM INSTRUCTIONS:\n" + trimmed + "\n"
 }
